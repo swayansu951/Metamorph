@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Metamorph</title>
+        <link rel="stylesheet" href="/static/style.css">
+    </head>
+    <body>
+        <div class="chat-container">
+            <div class="app-title">Metamorph</div>
+            <div class="toolbar">
+                <div class="upload-row">
+                    <input id="pdf-file" type="file" accept=".pdf">
+                    <button id="upload-btn" type="button">Upload PDF</button>
+                </div>
+                <input
+                    id="doc-id"
+                    type="text"
+                    placeholder="Document ID (upload a PDF or enter an existing one)"
+                >
+                <div id="status-text" class="status-text">
+                    Upload a PDF or enter a document ID to start chatting.
+                </div>
+            </div>
+
+            <div id="chat-box" class="chat-content">
+                <div class="message bot">
+                    Hello! Upload a PDF or enter a document ID, then ask your question.
+                </div>
+            </div>
+
+            <div class="input-area">
+                <textarea id="user-input" placeholder="Type a message here.." rows="1"></textarea>
+                <button id="send-btn" type="button">Send</button>
+            </div>
+        </div>
+
+        <script src="/static/script.js"></script>
+    </body>
+</html>
