@@ -1,6 +1,6 @@
 import faiss
 import pickle
-from retriever.query_embedder import embed_query
+from simple_rag.retriever.query_embedder import embed_query
 
 summary_index = faiss.read_index("rag_db/documents/summary_index.faiss")  
 

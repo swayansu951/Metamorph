@@ -1,9 +1,9 @@
 import os
 import re
 import ollama
-from context_builder import build_context
-from database.ingest_db import ingest_pdf
-from retriever.chunk_retriever import Chunk_retriever
+from simple_rag.context_builder import build_context
+from simple_rag.database.ingest_db import ingest_pdf
+from simple_rag.retriever.chunk_retriever import Chunk_retriever
 
 class GENERATE:
     prompt = """

@@ -1,5 +1,5 @@
-from retriever.document_router import find_documents
-from retriever.chunk_retriever import Chunk_retriever
+from simple_rag.retriever.document_router import find_documents
+from simple_rag.retriever.chunk_retriever import Chunk_retriever
 
 retriever = Chunk_retriever.retrieve_chunks()
 def retrieve(query):

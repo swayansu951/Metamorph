@@ -1,5 +1,5 @@
 from sentence_transformers import SentenceTransformer
-from database.embedder import model
+from simple_rag.database.embedder import model
 model = model
 
 def embed_query(query):

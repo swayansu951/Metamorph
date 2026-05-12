@@ -3,9 +3,9 @@ import pickle
 import re
 import faiss
 import numpy as np
-from database.embedder import model
-from database.load_pdf import extract_load_pdf
-from database.semantic_chunker import semantic_chunker
+from simple_rag.database.embedder import model
+from simple_rag.database.load_pdf import extract_load_pdf
+from simple_rag.database.semantic_chunker import semantic_chunker
 
 dim = model.get_sentence_embedding_dimension()
 

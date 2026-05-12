@@ -1,6 +1,6 @@
 import faiss
 import pickle
-from retriever.query_embedder import embed_query
+from simple_rag.retriever.query_embedder import embed_query
 
 class Chunk_retriever:
     def __init__(self, doc_id):
