@@ -1,10 +1,20 @@
 import os
 import re
 import ollama
+from dotenv import load_dotenv
+from huggingface_hub import login
 from simple_rag.context_builder import build_context
 from simple_rag.database.ingest_db import ingest_pdf
 from simple_rag.retriever.chunk_retriever import Chunk_retriever
 
+load_dotenv()
+token = os.getenv("HF_TOKEN")
+
+if token:
+    login(token=token)
+else:
+    print("[-] WARNONG::Invalid credentials: 404 token not found!")
+    
 class GENERATE:
     prompt = """
             Answer the question using the context below. If the answer is not found in the context, say "I don't know".
