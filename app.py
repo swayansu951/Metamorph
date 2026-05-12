@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent
 FRONTEND_DIR = PROJECT_ROOT / "Frontend"
 SIMPLE_RAG_DIR = PROJECT_ROOT / "simple_rag"
 
@@ -16,7 +16,6 @@ if str(SIMPLE_RAG_DIR) not in sys.path:
     sys.path.insert(0, str(SIMPLE_RAG_DIR))
 
 from simple_rag.database.ingest_db import ingest_pdf
-import simple_rag.database.load_pdf as load_pdf
 from simple_rag.main import GENERATE
 
 app = FastAPI()
@@ -42,18 +41,15 @@ async def serve_frontend():
 
 @app.post("/upload")
 async def upload_pdf(file:UploadFile = File(...)):
-    file_path = os.path.join(UPLOAD_FOLDER, file.filename)
+    safe_filename = Path(file.filename).name
+    file_path = UPLOAD_FOLDER / safe_filename
 
     with open(file_path, 'wb') as f:
         f.write(await file.read())
 
-    doc_id = os.path.splitext(file.filename)[0]
+    doc_id = file_path.stem
 
-    uploaded_pdf = Path(file_path)
-    if uploaded_pdf not in load_pdf.apps:
-        load_pdf.apps.append(uploaded_pdf)
-
-    ingest_pdf(file.filename, doc_id)
+    ingest_pdf(file_path, doc_id)
 
     return{
         "message" : "PDF indexed successfully",

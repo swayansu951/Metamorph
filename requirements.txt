@@ -4,3 +4,9 @@ python-multipart
 langchain
 openai
 pypdf
+PyMuPDF
+numpy
+faiss-cpu
+sentence-transformers
+scikit-learn
+ollama

@@ -1,4 +1,7 @@
-const API_BASE_URL = window.location.origin === 'null' ? 'https://armed-component-cartridge.ngrok-free.dev' : window.location.origin;
+const API_BASE_URL = 'https://armed-component-cartridge.ngrok-free.dev';
+const REQUEST_HEADERS = API_BASE_URL.includes('ngrok-free.dev')
+    ? { 'ngrok-skip-browser-warning': 'true' }
+    : {};
 
 const chatBox = document.getElementById('chat-box');
 const userInput = document.getElementById('user-input');
@@ -49,6 +52,7 @@ async function uploadPdf() {
 
         const response = await fetch(`${API_BASE_URL}/upload`, {
             method: 'POST',
+            headers: REQUEST_HEADERS,
             body: formData
         });
 
@@ -98,6 +102,7 @@ async function sendMessage() {
 
         const response = await fetch(`${API_BASE_URL}/chat`, {
             method: 'POST',
+            headers: REQUEST_HEADERS,
             body: formData
         });
 
