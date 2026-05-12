@@ -1,4 +1,4 @@
-const API_BASE_URL = window.location.origin === 'null' ? 'http://127.0.0.1:8000' : window.location.origin;
+const API_BASE_URL = window.location.origin === 'null' ? 'https://armed-component-cartridge.ngrok-free.dev' : window.location.origin;
 
 const chatBox = document.getElementById('chat-box');
 const userInput = document.getElementById('user-input');
