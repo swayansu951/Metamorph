@@ -49,12 +49,14 @@ body {
 
 #pdf-file,
 #doc-id,
+#reviewer-name,
 textarea {
     font: inherit;
 }
 
 #pdf-file,
-#doc-id {
+#doc-id,
+#reviewer-name {
     padding: 10px 12px;
     border: 1px solid #3A2D28;
     border-radius: 10px;
@@ -115,6 +117,95 @@ textarea {
     background: #C8AD90;
     border-radius: 10px;
     border: 2px solid #A48573;
+}
+
+.review-panel {
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: #B29281;
+    border-top: 1px solid #3A2D28;
+}
+
+.review-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.review-title {
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.review-status {
+    min-height: 18px;
+    font-size: 13px;
+}
+
+.review-grid {
+    display: grid;
+    grid-template-columns: minmax(200px, 260px) 1fr;
+    gap: 12px;
+}
+
+.review-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.review-field span {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.rating-group {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.rating-btn {
+    padding: 10px 0;
+}
+
+.rating-btn.active {
+    background: #3A2D28;
+    color: #C8AD90;
+}
+
+.review-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.tag-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border: 1px solid #3A2D28;
+    border-radius: 999px;
+    background: #C8AD90;
+    color: #3A2D28;
+}
+
+.tag-option input {
+    accent-color: #3A2D28;
+}
+
+#review-feedback {
+    min-height: 72px;
+}
+
+.review-actions {
+    display: flex;
+    justify-content: flex-end;
 }
 
 .message {
@@ -191,6 +282,11 @@ button:disabled {
 
     .upload-row,
     .input-area {
+        flex-direction: column;
+    }
+
+    .review-grid {
+        display: flex;
         flex-direction: column;
     }
 
