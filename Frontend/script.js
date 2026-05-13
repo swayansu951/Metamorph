@@ -10,9 +10,11 @@ const uploadBtn = document.getElementById('upload-btn');
 const pdfFileInput = document.getElementById('pdf-file');
 const docIdInput = document.getElementById('doc-id');
 const statusText = document.getElementById('status-text');
+const reviewPopup = document.getElementById('review-popup');
 const reviewerNameInput = document.getElementById('reviewer-name');
 const reviewFeedbackInput = document.getElementById('review-feedback');
 const submitReviewBtn = document.getElementById('submit-review-btn');
+const skipReviewBtn = document.getElementById('skip-review-btn');
 const reviewStatus = document.getElementById('review-status');
 const ratingButtons = Array.from(document.querySelectorAll('.rating-btn'));
 const reviewTagInputs = Array.from(document.querySelectorAll('.review-tags input[type="checkbox"]'));
@@ -24,6 +26,8 @@ let isUploading = false;
 let isReviewSubmitting = false;
 let selectedRating = 0;
 let latestReviewContext = null;
+let hasShownFirstReviewPopup = false;
+let hasResolvedFirstReview = false;
 
 function createRequestHeaders(extraHeaders = {}) {
     return { ...REQUEST_HEADERS, ...extraHeaders };
@@ -47,7 +51,12 @@ function setStatus(message, isError = false) {
 function updateButtonState() {
     sendBtn.disabled = isSending;
     uploadBtn.disabled = isUploading;
-    submitReviewBtn.disabled = isReviewSubmitting || !latestReviewContext;
+    submitReviewBtn.disabled = isReviewSubmitting || !isReviewPopupVisible();
+    skipReviewBtn.disabled = isReviewSubmitting || !isReviewPopupVisible();
+}
+
+function isReviewPopupVisible() {
+    return !reviewPopup.classList.contains('hidden');
 }
 
 function setReviewStatus(message, isError = false) {
@@ -91,6 +100,50 @@ function saveReviewerName(name) {
     } catch (error) {
         // Ignore local storage failures and keep the form usable.
     }
+}
+
+function showReviewPopup() {
+    reviewPopup.classList.remove('hidden');
+    reviewPopup.setAttribute('aria-hidden', 'false');
+    updateButtonState();
+}
+
+function hideReviewPopup() {
+    reviewPopup.classList.add('hidden');
+    reviewPopup.setAttribute('aria-hidden', 'true');
+    updateButtonState();
+}
+
+function maybeShowFirstReviewPopup() {
+    if (hasShownFirstReviewPopup || hasResolvedFirstReview || !latestReviewContext) {
+        return;
+    }
+
+    hasShownFirstReviewPopup = true;
+    resetReviewForm();
+    setReviewStatus('Share feedback on the first answer or skip it.');
+    showReviewPopup();
+}
+
+function normalizeReviewPayload(reviewAction) {
+    const reviewerName = reviewAction === 'skipped'
+        ? 'none'
+        : (reviewerNameInput.value.trim() || 'none');
+    const selectedOptions = reviewTagInputs
+        .filter((input) => input.checked)
+        .map((input) => input.value);
+    const trimmedFeedback = reviewFeedbackInput.value.trim();
+
+    return {
+        reviewer_name: reviewerName,
+        rating: reviewAction === 'skipped' ? null : (selectedRating || null),
+        selected_options: reviewAction === 'skipped' ? [] : selectedOptions,
+        feedback: reviewAction === 'skipped' ? 'none' : (trimmedFeedback || 'none'),
+        doc_id: latestReviewContext?.docId || 'none',
+        query: latestReviewContext?.query || 'none',
+        answer: latestReviewContext?.answer || 'none',
+        review_action: reviewAction
+    };
 }
 
 async function uploadPdf() {
@@ -148,13 +201,9 @@ async function sendMessage() {
     appendMessage(text, 'user');
     userInput.value = '';
 
-    latestReviewContext = null;
-    resetReviewForm();
-
     isSending = true;
     updateButtonState();
     setStatus(`Asking questions about "${docId}"...`);
-    setReviewStatus('Waiting for the latest answer before saving a review.');
 
     const botMessage = appendMessage('Thinking...', 'bot');
 
@@ -177,14 +226,14 @@ async function sendMessage() {
         if (!response.body) {
             const directResponse = await response.text();
             botMessage.textContent = directResponse;
-            latestReviewContext = {
-                query: text,
-                answer: directResponse,
-                docId
-            };
-            resetReviewForm();
-            setReviewStatus('Answer ready. Add a rating or notes if you want.');
-            updateButtonState();
+            if (!hasShownFirstReviewPopup && !hasResolvedFirstReview) {
+                latestReviewContext = {
+                    query: text,
+                    answer: directResponse,
+                    docId
+                };
+                maybeShowFirstReviewPopup();
+            }
             setStatus(`Connected to document: ${docId}`);
             return;
         }
@@ -210,20 +259,17 @@ async function sendMessage() {
         fullText += decoder.decode();
         const finalAnswer = fullText.trim() ? fullText : 'No response generated.';
         botMessage.textContent = finalAnswer;
-        latestReviewContext = {
-            query: text,
-            answer: finalAnswer,
-            docId
-        };
-        resetReviewForm();
-        setReviewStatus('Answer ready. Add a rating or notes if you want.');
-        updateButtonState();
+        if (!hasShownFirstReviewPopup && !hasResolvedFirstReview) {
+            latestReviewContext = {
+                query: text,
+                answer: finalAnswer,
+                docId
+            };
+            maybeShowFirstReviewPopup();
+        }
         setStatus(`Connected to document: ${docId}`);
     } catch (error) {
         botMessage.textContent = 'Sorry, I could not reach the chat service.';
-        latestReviewContext = null;
-        setReviewStatus('No answer was captured for review yet.', true);
-        updateButtonState();
         setStatus(error.message || 'Chat request failed.', true);
     } finally {
         isSending = false;
@@ -232,44 +278,22 @@ async function sendMessage() {
     }
 }
 
-async function submitReview() {
+async function sendReview(reviewAction) {
     if (!latestReviewContext) {
-        setReviewStatus('Ask a question and wait for an answer before reviewing.', true);
+        setReviewStatus('The first answer is not available for review.', true);
         return;
     }
 
-    const reviewerName = reviewerNameInput.value.trim();
-    if (!reviewerName) {
-        setReviewStatus('Please enter the reviewer name before saving.', true);
-        reviewerNameInput.focus();
-        return;
-    }
-
-    if (!selectedRating) {
-        setReviewStatus('Choose a rating from 1 to 5 before saving.', true);
-        return;
-    }
-
-    const selectedOptions = reviewTagInputs
-        .filter((input) => input.checked)
-        .map((input) => input.value);
-
-    const payload = {
-        reviewer_name: reviewerName,
-        rating: selectedRating,
-        selected_options: selectedOptions,
-        feedback: reviewFeedbackInput.value.trim(),
-        doc_id: latestReviewContext.docId,
-        query: latestReviewContext.query,
-        answer: latestReviewContext.answer
-    };
+    const payload = normalizeReviewPayload(reviewAction);
 
     isReviewSubmitting = true;
     updateButtonState();
-    setReviewStatus('Saving review...');
+    setReviewStatus(reviewAction === 'skipped' ? 'Saving skip choice...' : 'Saving review...');
 
     try {
-        saveReviewerName(reviewerName);
+        if (payload.reviewer_name !== 'none') {
+            saveReviewerName(payload.reviewer_name);
+        }
 
         const response = await fetch(`${API_BASE_URL}/review`, {
             method: 'POST',
@@ -282,8 +306,10 @@ async function submitReview() {
             throw new Error(errorText || 'Review could not be saved.');
         }
 
+        hasResolvedFirstReview = true;
         resetReviewForm();
-        setReviewStatus(`Review saved for ${reviewerName}.`);
+        hideReviewPopup();
+        setStatus(reviewAction === 'skipped' ? 'Review skipped and stored.' : 'Review saved successfully.');
     } catch (error) {
         setReviewStatus(error.message || 'Review could not be saved.', true);
     } finally {
@@ -294,12 +320,13 @@ async function submitReview() {
 
 uploadBtn.addEventListener('click', uploadPdf);
 sendBtn.addEventListener('click', sendMessage);
-submitReviewBtn.addEventListener('click', submitReview);
+submitReviewBtn.addEventListener('click', () => sendReview('submitted'));
+skipReviewBtn.addEventListener('click', () => sendReview('skipped'));
 
 ratingButtons.forEach((button) => {
     button.addEventListener('click', () => {
         setSelectedRating(Number(button.dataset.rating));
-        setReviewStatus('Review details updated.');
+        setReviewStatus('Rating updated.');
     });
 });
 

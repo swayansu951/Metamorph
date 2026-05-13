@@ -4,7 +4,7 @@ import json
 import re
 from pathlib import Path
 from datetime import datetime, timezone
-from typing import List
+from typing import List, Optional
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
@@ -50,13 +50,14 @@ REVIEW_OPTIONS = {
 
 
 class ReviewPayload(BaseModel):
-    reviewer_name: str
-    rating: int = Field(ge=1, le=5)
+    reviewer_name: str = "none"
+    rating: Optional[int] = Field(default=None, ge=1, le=5)
     selected_options: List[str] = Field(default_factory=list)
-    feedback: str = ""
-    doc_id: str
-    query: str
-    answer: str
+    feedback: str = "none"
+    doc_id: str = "none"
+    query: str = "none"
+    answer: str = "none"
+    review_action: str = "submitted"
 
 
 def sanitize_reviewer_name(reviewer_name: str) -> str:
@@ -87,9 +88,10 @@ async def upload_pdf(file:UploadFile = File(...)):
 
 @app.post("/review")
 async def save_review(review: ReviewPayload):
-    reviewer_name = review.reviewer_name.strip()
-    if not reviewer_name:
-        raise HTTPException(status_code=400, detail="Reviewer name is required.")
+    reviewer_name = review.reviewer_name.strip() or "none"
+
+    if review.review_action not in {"submitted", "skipped"}:
+        raise HTTPException(status_code=400, detail="Invalid review action.")
 
     invalid_options = [
         option for option in review.selected_options
@@ -100,17 +102,15 @@ async def save_review(review: ReviewPayload):
 
     review_record = {
         "reviewer_name": reviewer_name,
-        "rating": review.rating,
-        "selected_options": review.selected_options,
-        "feedback": review.feedback.strip(),
-        "doc_id": review.doc_id.strip(),
-        "query": review.query.strip(),
-        "answer": review.answer.strip(),
+        "rating": review.rating if review.rating is not None else "none",
+        "selected_options": review.selected_options or ["none"],
+        "feedback": review.feedback.strip() or "none",
+        "doc_id": review.doc_id.strip() or "none",
+        "query": review.query.strip() or "none",
+        "answer": review.answer.strip() or "none",
+        "review_action": review.review_action,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
-
-    if not review_record["query"] or not review_record["answer"]:
-        raise HTTPException(status_code=400, detail="Query and answer are required for reviews.")
 
     reviewer_file = REVIEW_FOLDER / f"{sanitize_reviewer_name(reviewer_name)}.jsonl"
     with reviewer_file.open("a", encoding="utf-8") as review_file:

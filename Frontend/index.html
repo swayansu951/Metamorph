@@ -30,15 +30,15 @@
                 </div>
             </div>
 
-            <div class="review-panel">
-                <div class="review-header">
-                    <div class="review-title">Answer Review</div>
-                    <div id="review-status" class="review-status">
-                        Submit feedback after a response arrives.
+            <div id="review-popup" class="review-popup hidden" aria-hidden="true">
+                <div class="review-popup-card">
+                    <div class="review-header">
+                        <div class="review-title">Review the first answer</div>
+                        <div id="review-status" class="review-status">
+                            Share feedback or skip it.
+                        </div>
                     </div>
-                </div>
 
-                <div class="review-grid">
                     <label class="review-field">
                         <span>Reviewer name</span>
                         <input id="reviewer-name" type="text" placeholder="Enter your name">
@@ -54,33 +54,34 @@
                             <button class="rating-btn" type="button" data-rating="5" aria-pressed="false">5</button>
                         </div>
                     </div>
-                </div>
 
-                <div class="review-field">
-                    <span>Quick checks</span>
-                    <div class="review-tags">
-                        <label class="tag-option">
-                            <input type="checkbox" value="accurate answer">
-                            <span>Accurate answer</span>
-                        </label>
-                        <label class="tag-option">
-                            <input type="checkbox" value="first response">
-                            <span>First response</span>
-                        </label>
-                        <label class="tag-option">
-                            <input type="checkbox" value="followed query correctly">
-                            <span>Followed query correctly</span>
-                        </label>
+                    <div class="review-field">
+                        <span>Quick checks</span>
+                        <div class="review-tags">
+                            <label class="tag-option">
+                                <input type="checkbox" value="accurate answer">
+                                <span>Accurate answer</span>
+                            </label>
+                            <label class="tag-option">
+                                <input type="checkbox" value="first response">
+                                <span>First response</span>
+                            </label>
+                            <label class="tag-option">
+                                <input type="checkbox" value="followed query correctly">
+                                <span>Followed query correctly</span>
+                            </label>
+                        </div>
                     </div>
-                </div>
 
-                <label class="review-field">
-                    <span>Notes</span>
-                    <textarea id="review-feedback" rows="2" placeholder="Optional feedback"></textarea>
-                </label>
+                    <label class="review-field">
+                        <span>Notes</span>
+                        <textarea id="review-feedback" rows="2" placeholder="Optional feedback"></textarea>
+                    </label>
 
-                <div class="review-actions">
-                    <button id="submit-review-btn" type="button">Save Review</button>
+                    <div class="review-actions">
+                        <button id="skip-review-btn" class="secondary-btn" type="button">Skip</button>
+                        <button id="submit-review-btn" type="button">Send Review</button>
+                    </div>
                 </div>
             </div>
 

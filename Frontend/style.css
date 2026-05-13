@@ -12,6 +12,7 @@ body {
 }
 
 .chat-container {
+    position: relative;
     width: min(100%, 1050px);
     height: min(90vh, 900px);
     display: flex;
@@ -119,21 +120,34 @@ textarea {
     border: 2px solid #A48573;
 }
 
-.review-panel {
-    padding: 16px 20px;
+.review-popup {
+    position: absolute;
+    top: 180px;
+    right: 20px;
+    width: min(360px, calc(100% - 40px));
+    z-index: 10;
+}
+
+.review-popup.hidden {
+    display: none;
+}
+
+.review-popup-card {
+    padding: 16px;
     display: flex;
     flex-direction: column;
     gap: 12px;
     background: #B29281;
-    border-top: 1px solid #3A2D28;
+    border: 1px solid #3A2D28;
+    border-radius: 14px;
+    box-shadow: 0 14px 28px rgba(58, 45, 40, 0.18);
 }
 
 .review-header {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
 }
 
 .review-title {
@@ -144,12 +158,6 @@ textarea {
 .review-status {
     min-height: 18px;
     font-size: 13px;
-}
-
-.review-grid {
-    display: grid;
-    grid-template-columns: minmax(200px, 260px) 1fr;
-    gap: 12px;
 }
 
 .review-field {
@@ -206,6 +214,11 @@ textarea {
 .review-actions {
     display: flex;
     justify-content: flex-end;
+    gap: 10px;
+}
+
+.secondary-btn {
+    background: #C8AD90;
 }
 
 .message {
@@ -285,9 +298,11 @@ button:disabled {
         flex-direction: column;
     }
 
-    .review-grid {
-        display: flex;
-        flex-direction: column;
+    .review-popup {
+        top: auto;
+        right: 12px;
+        bottom: 96px;
+        width: calc(100% - 24px);
     }
 
     .message {
