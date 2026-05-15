@@ -1,0 +1,134 @@
+# Advanced web crawling technique...
+# Dedicates on high performance with high quality and accurate retrieval.
+# No case of halucination and misliding of information.
+
+import re
+import json
+import torch
+import ollama
+import asyncio
+from llama_cpp import llama
+from sentence_transformers import CrossEncoder
+from duckduckgo_search import duckduckgo_search
+from crawl4ai.deep_crawling.scorers import KeywordRelevanceScorer
+from crawl4ai.markdown_generation_strategy import DefaultMarkdownGenerator
+from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, BrowserConfig, CacheMode
+from crawl4ai.deep_crawling.filters import URLPatternFilter, DomainFilter, ContentRelevanceFilter
+
+
+USE_LOCAL_SYSTEM = True
+
+# DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+
+
+reranker_model = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2', device="cuda") if torch.cuda.is_available() else CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2', device="cpu")
+
+LOCAL_LLM = None
+    
+async def web_scrape(url:list) -> list:
+    """scrap web pages using a headless browser to retireve web content"""
+
+    browser_config = BrowserConfig(headless=True, 
+                                   extra_args=["--disable-blink-features=AutomationControlled"]
+                                   )
+    
+    run_config = CrawlerRunConfig(
+        markdown_generator=DefaultMarkdownGenerator(
+            content_filter=True,
+            options={'strip_link' : True}),
+            bypass_cache=True
+            )
+    scraped_pages = []
+    async with AsyncWebCrawler(config= browser_config) as crawler:
+        results = await crawler.arun_many(config=run_config, 
+                                          urls=url)
+        for result in results:
+            if result.success:
+                scraped_pages.append({"url" : url, "content" : result.markdown.fit_markdown}
+                                     )
+    
+    return scraped_pages
+
+def reranker(query: str, crawled_data: list):
+    """rerank the response from the web though scoring to retrieve highest precision text"""
+
+    candidates = []
+    for pages in crawled_data:
+        url_header = f"[source doc context : {pages["url"]}]\n"
+        paragraphs = [
+            p.strip() for p in pages["content"].split("\n\n") if len(p.strip()) > 40     
+        ]
+        
+        for para in paragraphs:
+            candidates.append({"text" : f"{url_header}{para}"})
+    
+    if not candidates:
+        return []
+    
+    # calculate attention matrix score
+    pair = [[query, item["text"]] for item in candidates[:25]]
+
+    with torch.no_grad():
+        score = reranker_model.predict(pair)
+
+    ranked_indices = sorted(range(len(score)), key=lambda i: score[i], reverse=True)
+    return [candidates[idx]["text"] for idx in ranked_indices[:3]]
+
+def generate_response(query:str, context:list):
+    """LLM response"""
+    unified_context = "source".join(context)
+    SYSTEM_PROMPT = ("""
+                    you are an adversarial information extractor, extract information according to the user's query.\n
+                    Do not use external knowledge.\n
+                    You must return your response in a valid json object matching this schema :\n
+                     {\n
+                        "resoning_step" : [step1, step2], \n
+                        "structured_finding" : [{"fact" : "extracted fact", "source_url" : "url"}], \n
+                        "final_content" : "the summary answer here...." \n
+                     } 
+    """)
+    USER_PROMPT = (
+                    f"context :\n {unified_context}\n\n Query : \n {query}\n\n return json output: "
+    )
+    
+    FULL_PROMPT = (
+        f"<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{SYSTEM_PROMPT}<|eot_id|>"
+        f"<|start_header_id|>user<|end_header_id|>\n\n{USER_PROMPT}<|eot_id|>"
+        f"<|start_header_id|>assistant<|end_header_id|>\n\n"
+    )
+    response = ollama.chat(model="llama3.1:8b-instruct-q5_K_S", 
+                                    stream=True, 
+                                    think="medium", 
+                                    options={"temperature" :0.1,
+                                            "num_ctx" : 4000,
+                                            "num_predict" : 512,
+                                            "format" : "json"},
+                                    prompt=FULL_PROMPT
+                                    )
+    for chunk in response:
+        for chunk in response:
+            content = chunk.get("message", {}).get("content", "")
+            if not content:
+                continue
+
+            final_text = re.sub(r'\[.*?\]', '', content)
+            if final_text:
+                yield final_text
+
+async def run_pipeline(query: str, url:list):
+    print("::: STEP1 ::: ")
+    raw_data = web_scrape(url=url)
+
+    print("::: STEP2 :::")
+    refined_page = reranker(query=query, crawled_data=raw_data)
+
+    print("::: STEP3 :::")
+    final_output = generate_response(query=query, context=refined_page)     
+
+    print("::: FINAL OUTPUT :::")
+    print(final_output)
+
+
+# hard code the web pages to scrap 
+# user query
+# function call using asyncio.run(...)
