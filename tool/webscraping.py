@@ -7,6 +7,7 @@ import json
 import torch
 import ollama
 import asyncio
+from langchain_core.tools import tool
 from llama_cpp import llama
 from sentence_transformers import CrossEncoder
 from duckduckgo_search import duckduckgo_search
@@ -96,6 +97,7 @@ def generate_response(query:str, context:list):
         f"<|start_header_id|>user<|end_header_id|>\n\n{USER_PROMPT}<|eot_id|>"
         f"<|start_header_id|>assistant<|end_header_id|>\n\n"
     )
+    
     response = ollama.chat(model="llama3.1:8b-instruct-q5_K_S", 
                                     stream=True, 
                                     think="medium", 
@@ -114,10 +116,12 @@ def generate_response(query:str, context:list):
             final_text = re.sub(r'\[.*?\]', '', content)
             if final_text:
                 yield final_text
-
-async def run_pipeline(query: str, url:list):
+@tool
+async def run_pipeline(query: str, url:list): # set pre defined urls to use only not more that that, change: url
+    """Runs the webscraping pipeline to retrieve information according to the users query"""
+    
     print("::: STEP1 ::: ")
-    raw_data = web_scrape(url=url)
+    raw_data = await web_scrape(url=url)
 
     print("::: STEP2 :::")
     refined_page = reranker(query=query, crawled_data=raw_data)
@@ -128,6 +132,7 @@ async def run_pipeline(query: str, url:list):
     print("::: FINAL OUTPUT :::")
     print(final_output)
 
+    return final_output
 
 # hard code the web pages to scrap 
 # user query

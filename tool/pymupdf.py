@@ -17,8 +17,8 @@ if not image_folder:
 class PymupdfTools:
     
     @tool
-    def extract_image_from_pdf(self,pdf):
-        """In this we can get the images inside the pdf by using pymupdf's inbuilt function"""
+    def extract_image_from_pdf(pdf):
+        """In this we can get the images form the pdf by using pymupdf's inbuilt function"""
         
         doc = pymupdf.open(pdf)
         for page_index in range(len(doc)):
@@ -45,25 +45,30 @@ class PymupdfTools:
             pix = None
 
     @tool 
-    def extract_vector_graph(self, pdf):
+    def extract_vector_graph( pdf):
+        """To extract vector graphs from the documents"""
+
         doc = pymupdf.open(pdf)
         for page_index in range(len(doc)):
             page = doc[page_index]
             image = page.get_images()
-
+# under development
     @tool
-    def get_snap_of_pages(self,pdf):
+    def get_snap_of_pages(pdf):
         """In this we can take the snapshot of each page of the pdf file using the pymupdf's inbuilt function"""
         pass
 
+    # under development
     @tool
-    def make_image_from_doc_pages(self,pdf):
+    def make_image_from_doc_pages(pdf):
         """In this we can create/generate images from the document using pymupdf's inbuilt function"""
+        
         doc_open = pymupdf.open(pdf)   
 
     @tool 
     def add_image_2_pdf(pdf, image, x_ratio=0, y_ratio=0, w_ratio=0.5, h_ratio=0.5):
         """In this we can add image inside a pdf using pymupdf"""
+
         doc = pymupdf.open(pdf)
         for page in doc:
             w, h = page.rect.width, page.rect.height
