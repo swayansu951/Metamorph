@@ -1,8 +1,10 @@
 :root {
     --ink: #261f16;
     --olive: #353400;
+    --olive-deep: #292900;
     --olive-soft: #565313;
     --gold: #efe75b;
+    --gold-soft: #fbf5bb;
     --paper: #c8ad90;
     --panel: #a48573;
     --line: rgba(38, 31, 22, 0.72);
@@ -41,6 +43,7 @@ textarea {
     display: flex;
     align-items: center;
     justify-content: flex-start;
+    padding-left: 4px;
 }
 
 .brand-lockup {
@@ -55,6 +58,20 @@ textarea {
     text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
 }
 
+.brand-lockup > div {
+    display: flex;
+    flex-direction: column;
+    line-height: 0.9;
+}
+
+.brand-lockup small {
+    margin-top: 8px;
+    color: rgba(251, 245, 187, 0.72);
+    font-size: clamp(10px, 1.5vw, 13px);
+    font-weight: 700;
+    letter-spacing: 0.28em;
+}
+
 .brand-mark {
     width: clamp(54px, 8vw, 96px);
     height: clamp(54px, 8vw, 96px);
@@ -66,11 +83,15 @@ textarea {
     filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35));
 }
 
+.brand-mark .hub {
+    fill: rgba(239, 231, 91, 0.1);
+}
+
 .workspace {
     flex: 1;
     min-height: 0;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 320px;
+    grid-template-columns: minmax(0, 1fr) 350px;
     gap: 16px;
 }
 
@@ -294,10 +315,12 @@ button:disabled {
     min-height: 0;
     display: flex;
     flex-direction: column;
-    background: rgba(53, 52, 0, 0.88);
-    color: #fbf5bb;
+    background:
+        radial-gradient(circle at 0% 0%, rgba(239, 231, 91, 0.15), transparent 34%),
+        linear-gradient(180deg, rgba(53, 52, 0, 0.96), rgba(41, 41, 0, 0.92));
+    color: var(--gold-soft);
     border: 1px solid rgba(239, 231, 91, 0.35);
-    border-radius: 8px;
+    border-radius: 18px;
     overflow: hidden;
     box-shadow: 0 20px 60px rgba(38, 31, 22, 0.2);
 }
@@ -323,8 +346,20 @@ button:disabled {
 }
 
 .session-action {
-    color: #fbf5bb;
+    color: var(--gold-soft);
     border-color: rgba(239, 231, 91, 0.45);
+    white-space: nowrap;
+}
+
+.session-hint {
+    margin: 14px 14px 0;
+    padding: 12px;
+    color: rgba(251, 245, 187, 0.76);
+    font-size: 12px;
+    line-height: 1.45;
+    background: rgba(255, 248, 226, 0.07);
+    border: 1px solid rgba(239, 231, 91, 0.18);
+    border-radius: 14px;
 }
 
 .session-list {
@@ -338,29 +373,68 @@ button:disabled {
 
 .session-card {
     width: 100%;
-    padding: 12px;
+    padding: 14px;
     text-align: left;
-    color: #fbf5bb;
-    background: rgba(255, 248, 226, 0.07);
+    color: var(--gold-soft);
+    background:
+        linear-gradient(135deg, rgba(255, 248, 226, 0.1), rgba(255, 248, 226, 0.035));
     border: 1px solid rgba(239, 231, 91, 0.24);
-    border-radius: 8px;
+    border-radius: 16px;
 }
 
 .session-card.active {
-    background: rgba(239, 231, 91, 0.16);
+    background:
+        linear-gradient(135deg, rgba(239, 231, 91, 0.18), rgba(255, 248, 226, 0.06));
     border-color: rgba(239, 231, 91, 0.7);
+}
+
+.session-card-topline {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
 }
 
 .session-card-title {
     font-weight: 800;
-    margin-bottom: 6px;
+    line-height: 1.2;
+}
+
+.session-card-state {
+    flex: 0 0 auto;
+    padding: 4px 8px;
+    color: var(--olive-deep);
+    background: var(--gold);
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 }
 
 .session-card-doc,
 .session-card-summary {
     font-size: 12px;
-    line-height: 1.35;
+    line-height: 1.45;
     color: rgba(251, 245, 187, 0.78);
+}
+
+.session-card-doc span,
+.session-card-summary span {
+    display: block;
+    margin: 10px 0 3px;
+    color: rgba(239, 231, 91, 0.94);
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.session-card-updated {
+    margin-top: 12px;
+    color: rgba(251, 245, 187, 0.55);
+    font-size: 11px;
 }
 
 .session-empty {

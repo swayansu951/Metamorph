@@ -87,6 +87,20 @@ function summarizeSession(session) {
     return `${userPart} ${botPart}`.trim().slice(0, 170);
 }
 
+function formatSessionTime(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+        return 'Just now';
+    }
+
+    return date.toLocaleString([], {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
 function renderSessions() {
     sessionList.innerHTML = '';
 
@@ -107,20 +121,33 @@ function renderSessions() {
             button.className = `session-card${session.id === activeSessionId ? ' active' : ''}`;
             button.dataset.sessionId = session.id;
 
+            const topLine = document.createElement('div');
+            topLine.className = 'session-card-topline';
+
             const title = document.createElement('div');
             title.className = 'session-card-title';
             title.textContent = session.title || 'New chat';
 
+            const state = document.createElement('span');
+            state.className = 'session-card-state';
+            state.textContent = session.id === activeSessionId ? 'Active' : 'Continue';
+
+            topLine.append(title, state);
+
             const doc = document.createElement('div');
             doc.className = 'session-card-doc';
             const documentLabel = session.docName || session.docId;
-            doc.textContent = documentLabel ? `Document: ${documentLabel}` : 'Document: web only';
+            doc.innerHTML = `<span>Document</span>${documentLabel ? documentLabel : 'Web only'}`;
 
             const summary = document.createElement('div');
             summary.className = 'session-card-summary';
-            summary.textContent = session.summary || 'No conversation yet.';
+            summary.innerHTML = `<span>Memory</span>${session.summary || 'No conversation yet.'}`;
 
-            button.append(title, doc, summary);
+            const updated = document.createElement('div');
+            updated.className = 'session-card-updated';
+            updated.textContent = `Updated ${formatSessionTime(session.updatedAt)}`;
+
+            button.append(topLine, doc, summary, updated);
             button.addEventListener('click', () => selectSession(session.id));
             sessionList.appendChild(button);
         });
@@ -391,11 +418,14 @@ async function sendMessage() {
                 };
                 maybeShowFirstReviewPopup();
             }
-            updateActiveSession((session) => {
-                session.docId = docId;
-                session.title = session.title === 'New chat' ? text.slice(0, 48) || 'New chat' : session.title;
-                session.messages.push({ sender: 'user', text });
-                session.messages.push({ sender: 'bot', text: directResponse });
+        updateActiveSession((session) => {
+            session.docId = docId;
+            if (!docId) {
+                session.docName = '';
+            }
+            session.title = session.title === 'New chat' ? text.slice(0, 48) || 'New chat' : session.title;
+            session.messages.push({ sender: 'user', text });
+            session.messages.push({ sender: 'bot', text: directResponse });
             });
             setStatus(docId ? `Connected to document: ${docId}` : 'Answered with web fallback.');
             return;
@@ -424,6 +454,9 @@ async function sendMessage() {
         botMessage.textContent = finalAnswer;
         updateActiveSession((session) => {
             session.docId = docId;
+            if (!docId) {
+                session.docName = '';
+            }
             session.title = session.title === 'New chat' ? text.slice(0, 48) || 'New chat' : session.title;
             session.messages.push({ sender: 'user', text });
             session.messages.push({ sender: 'bot', text: finalAnswer });
