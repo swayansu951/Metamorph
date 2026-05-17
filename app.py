@@ -22,6 +22,7 @@ if str(SIMPLE_RAG_DIR) not in sys.path:
 
 from simple_rag.database.ingest_db import ingest_pdf
 from simple_rag.main import GENERATE
+from query_router import async_final_answer
 
 app = FastAPI()
 
@@ -125,11 +126,11 @@ async def save_review(review: ReviewPayload):
 
 async def chat(
     query : str = Form(...),
-    doc_id: str = Form(...)
+    doc_id: str = Form("")
 ):
-    def stream_response():
-        for token in rag.generate(query, doc_id):
-            yield token
+    async def stream_response():
+        answer = await async_final_answer(query, doc_id.strip() or None)
+        yield answer
     
     return StreamingResponse(
         stream_response(),

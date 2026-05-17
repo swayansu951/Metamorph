@@ -54,7 +54,7 @@ class GENERATE:
                                stream=True, 
                                options={'num_gpu':-1,
                                         }, 
-                               keep_alive="1m",
+                               keep_alive=3,
                                )
 
         for chunk in response:

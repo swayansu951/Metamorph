@@ -45,7 +45,7 @@ async def web_scrape(url:list) -> list:
                                           urls=url)
         for result in results:
             if result.success:
-                scraped_pages.append({"url" : url, "content" : result.markdown.fit_markdown}
+                scraped_pages.append({"url" : getattr(result, "url", ""), "content" : result.markdown.fit_markdown}
                                      )
     
     return scraped_pages
@@ -55,7 +55,7 @@ def reranker(query: str, crawled_data: list):
 
     candidates = []
     for pages in crawled_data:
-        url_header = f"[source doc context : {pages["url"]}]\n"
+        url_header = f"[source doc context : {pages['url']}]\n"
         paragraphs = [
             p.strip() for p in pages["content"].split("\n\n") if len(p.strip()) > 40     
         ]
@@ -106,8 +106,10 @@ def generate_response(query:str, context:list):
                                             "num_predict" : 512,
                                             'num_gpu' : -1,
                                             },
-                                    prompt=FULL_PROMPT
+                                    prompt=FULL_PROMPT,
+                                    keep_alive=3,
                                     )
+
     for chunk in response:
         for chunk in response:
             content = chunk.get("message", {}).get("content", "")
@@ -117,7 +119,7 @@ def generate_response(query:str, context:list):
             final_text = re.sub(r'\[.*?\]', '', content)
             if final_text:
                 yield final_text
-@tool
+
 async def run_pipeline(query: str, url:dict): # set pre defined urls to use only not more that that, change: url
     """Runs the webscraping pipeline to retrieve information according to the users query
         1. set the query : str with hardcoded url : dict in dictionary format separating the different types of urls based on task
@@ -136,7 +138,16 @@ async def run_pipeline(query: str, url:dict): # set pre defined urls to use only
 
     # #if test only this then uncomment this
     # ::: FINAL OUTPUT :::
-    return final_output 
+    combined_context = []
+    
+    async with AsyncWebCrawler() as crawler:
+        for url in url  :
+            # arun() must be awaited inside this async function
+            result = await crawler.arun(url=url)
+            if result.success:
+                combined_context.append(f"Source ({url}):\n{result.markdown}")
+                
+    return "\n\n".join(combined_context)
 
 # hard code the web pages to scrap 
 # user query

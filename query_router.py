@@ -1,19 +1,14 @@
 import ollama
-from tool_registry import TOOLS
+import asyncio
 from simple_rag.main import GENERATE
-from langchain_core.tools import tool
 from typing import TypedDict, Optional
 from langchain_ollama import ChatOllama
-from tool.rag_tool import make_rag_tool
 from tool.webscraping import run_pipeline
-from langgraph_bigtool import create_agent
 from langgraph.graph.message import add_messages
 from langgraph.graph import StateGraph,END,START
-from langgraph.store.memory import InMemoryStore
 from typing import TypedDict, Annotated , Sequence
-from simple_rag.database.embedder import embed_model
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_core.messages import trim_messages, BaseMessage, SystemMessage, HumanMessage
+from langchain_core.messages import BaseMessage, SystemMessage, HumanMessage
 
 
 class AgentState(TypedDict):
@@ -22,6 +17,8 @@ class AgentState(TypedDict):
     doc_id : Optional[str]
     chunk_ids : list[int]
     cursor : int 
+    window : int
+    slide_window : int
     context : str
     current_window : str
     all_window : list[str]
@@ -29,6 +26,7 @@ class AgentState(TypedDict):
     final_answer : str
     enough : bool
     use_web : bool
+    source : str
     rest : int
 
 # Simple RAG response generator
@@ -49,71 +47,19 @@ llm_model = ChatOllama(model='llama3.1:8b-instruct-q5_K_S',
                         temperature=0.1,
                         )
 
-# conversational memmory access..
-store = InMemoryStore()
-namespace = ("tools", "agent_tools")
-
-tools = TOOLS()
-
 # urls for web crwaling
-URLS = {
-    "finance" : ["https://yahoo.com",
-                    "https://sec.gov"],
-    "health" : ["https://cdc.gov",
-                "https://who.int"],
-    "science":["https://arxiv.org",
-                "https://nasa.gov"],
-    "geography":["https://usgs.gov",
-                "https://worldbank.org"],
-    "legals":["https://indiacode.nic.in",
-                "https://govinfo.gov"]
-}
-# extra registry..
-def build_registry(doc_id: str | None):
-    
-    registry = {
-            "web_search": run_pipeline,
-    }
-    
-    if doc_id:
-        registry["rag_search"] = make_rag_tool(doc_id)
-
-    return registry
-
-# sliding window concept...
-message_trimmer = trim_messages(max_tokens = 4000,
-                                include_system = True,
-                                token_counter = llm_model,
-                                allow_partial = False,
-                                start_on = "human",
-                                strategy="last"
-                                )
-
-# implemented the sliding window over the chat_history..
-def run_query(query:str, doc:str|None=None, chat_history = None):
-    """LLm's response structure with implemented sliding window"""
-    
-    registry = build_registry(doc)
-
-    agent_graph = create_agent(
-        llm=llm_model,
-        tool_registry=registry
-    )
-    raw_message = [system_prompt,
-                   *(chat_history or []),
-                   HumanMessage(query)
-                   ]
-    trimed_message = message_trimmer.invoke(raw_message)
-    app = agent_graph.compile()
-
-    return app.invoke(
-        {
-        "messages" : trimed_message
-        }
-    )
-
-user_prompts = [msg["content"] for msg in messages if msg["role"] == "user"]# only contains the system prompt. So the graph is immediately streamed with an empty user query.
-
+URLS = [
+    "https://yahoo.com",
+    "https://sec.gov",
+    "https://cdc.gov",
+    "https://who.int",
+    "https://arxiv.org",
+    "https://nasa.gov",
+    "https://usgs.gov",
+    "https://worldbank.org",
+    "https://indiacode.nic.in",
+    "https://govinfo.gov"
+]
 window = 4500
 slide_window = 2000
 
@@ -123,6 +69,7 @@ class AgentState2(TypedDict):
     doc_id : Optional[str]
     chunk_ids : list[int]
     cursor : int 
+    window : int
     context : str
     current_window : str
     all_window : list[str]
@@ -139,8 +86,8 @@ def prepare_rag_windows(state:AgentState) -> AgentState:
         3. set the cursor original pointer at 0.
         4. Set the current window be the slider window which feed the context to the LLM.
     """
-    context = generator.generate(user_input=state["query"], doc_id=state["doc_id"])
-    window = state.get("context", 4050)
+    context = generator.retrieve_context(query=state["query"], doc_id=state["doc_id"])
+    window = state.get("window", 4050)
     slider_window = state.get("slide_window", int(window * 0.15))
 
     spliter = RecursiveCharacterTextSplitter(
@@ -148,7 +95,7 @@ def prepare_rag_windows(state:AgentState) -> AgentState:
                                     chunk_overlap = slider_window,
                                     separators=["\n\n","\n"," ",""],
                                 )
-    windows = spliter.split_text(state["context"])
+    windows = spliter.split_text(context)
     
     return {
     "context": context,
@@ -157,18 +104,57 @@ def prepare_rag_windows(state:AgentState) -> AgentState:
     "cursor": 0,
     "all_window": windows,
     "current_window": windows[0] if windows else "",
+    "source": "rag",
     "rest": window - slider_window
     }
 
-def web_search(state:AgentState) -> AgentState:
+def _stringify_context(context) -> str:
+    if context is None:
+        return ""
+    if isinstance(context, str):
+        return context
+    try:
+        return "".join(str(part) for part in context)
+    except TypeError:
+        return str(context)
+
+async def _run_web_pipeline(query: str) -> str:
+    if hasattr(run_pipeline, "ainvoke"):
+        context = await run_pipeline.ainvoke({"query": query, "url": URLS})
+    else:
+        context = await run_pipeline(query, url=URLS)
+    return _stringify_context(context)
+
+async def add_to_web(state:AgentState) -> AgentState:
+    """call add_to_web if the evaluator directs to 'WEB_SEARCH' to get more clarity answer from the user's query"""
+    context = await _run_web_pipeline(state["query"])
+    
+    combined_context = f"{state.get('context', '')}\n\n{context}".strip()
+    window = state.get("window", 6000)
+    slider_window = state.get("slide_window", int(window * 0.15))
+    spliter = RecursiveCharacterTextSplitter(
+                                    chunk_size = window,
+                                    chunk_overlap = slider_window,
+                                    separators=["\n\n","\n"," ",""],
+                                )
+    windows = spliter.split_text(combined_context)
+
+    return {
+    "context": combined_context,
+    "window": window,
+    "slide_window": slider_window,
+    "cursor": 0,
+    "all_window": windows,
+    "current_window": windows[0] if windows else "",
+    "source": "web",
+    "rest": window - slider_window
+    }
+
+async def web_search(state:AgentState) -> AgentState:
     """call web_search tool for retireve information from web if no document or less precise info in document"""
-    context = run_pipeline(state["query"], url=[URLS["finance"],
-                                                         URLS["geography"],
-                                                         URLS["health"],
-                                                         URLS["legals"],
-                                                         URLS["science"]
-                                                         ]
-                                    )
+    
+    context = await _run_web_pipeline(state["query"])
+    
     window = state.get("window", 4000)
     slider_window = state.get("slide_window", int(window * 0.15))
 
@@ -177,7 +163,7 @@ def web_search(state:AgentState) -> AgentState:
                                     chunk_overlap = slider_window,
                                     separators=["\n\n","\n"," ",""],
                                 )
-    windows = spliter.split_text(state["context"])
+    windows = spliter.split_text(context)
 
     return {
     "context": context,
@@ -186,8 +172,35 @@ def web_search(state:AgentState) -> AgentState:
     "cursor": 0,
     "all_window": windows,
     "current_window": windows[0] if windows else "",
+    "source": "web",
     "rest": window - slider_window
     }
+
+def reason_over_window(state:AgentState) -> AgentState:
+    """Evaluate whether the current window has enough evidence to answer the query."""
+    
+    prompt = f"""
+    You are an expert AI retrieval judge. Your task is to evaluate whether the context window contains enough relevant evidence to answer the user's query.
+    
+    Relevance definition: The context directly supports a useful, grounded answer to the query.
+
+    User Query: {state["query"]}
+    Context Window: {state["current_window"]}
+
+    Scoring Rubric:
+    5 - Fully relevant and enough to answer.
+    4 - Mostly relevant and likely enough.
+    3 - Partially relevant, but may need more context.
+    2 - Weakly relevant.
+    1 - Not relevant.
+    
+    If the score is 4 or 5, exactly return 'enough'.
+    If the score is 1, 2, or 3, exactly return 'need_more'.
+    """  
+    decision = llm_model.invoke([HumanMessage(content=prompt)]).content.lower()
+    enough = "enough" in decision and "need_more" not in decision
+    
+    return {"enough": enough}
 
 def load_next_window(state:AgentState) -> AgentState:
     """slide the current window slider to the next if the info is not relevent"""
@@ -202,24 +215,22 @@ def load_next_window(state:AgentState) -> AgentState:
         }
     return {"current_window": ""}
 
-def reason_over_window(state:AgentState) -> AgentState:
-    """llm on that window to decide which path to take, RAG_SEARCH or WEB_SEARCH"""
-    pass
-
 def decide_next_step(state:AgentState) -> AgentState:
     """decide if need more context/window, then slide window"""
     
     current_cursor = state.get("cursor", 0)
     all_w = state.get("all_window", [])
+
+    if state.get("enough"):
+        return "FINISHED"
+
+    if current_cursor < len(all_w) - 1:
+        return "NEXT_WINDOW"
     
-    # If we have run out of window chunks in the current data source
-    if current_cursor >= len(all_w) - 1:
-        # If we finished RAG windows but haven't tried web yet, fallback to web
-        if not state.get("use_web") and state.get("doc_id"):
-            return "WEB_SEARCH"
-        return "FINISH"
-        
-    return "NEXT_WINDOW"
+    if state.get("source") == "rag":
+        return "WEB_SEARCH"
+
+    return "FINISHED"
     # state["cursor"] += 1
     
     # if (state["current_window"] == "") or (state["doc_id"] == "") : state["use_web"] = True ; return "WEB_SEARCH"
@@ -243,13 +254,13 @@ def finalize_answer(state:AgentState) -> AgentState:
     """Retrieves the final answer from big llm"""
 
     prompt = (
-            f"from the user query : {state["query"]}"
-            f"retireve answer from the context : {state["current_window"]} \n"
+            f"from the user query : {state['query']}\n"
+            f"retireve answer from the context : {state['current_window']} \n"
             f"please give a comprihensive well structured response for the user"
               )
     response = llm_model.invoke([HumanMessage(content=prompt)]).content
    
-    return {"response" : response}
+    return {"final_answer" : response}
 
 def graph(state:AgentState) -> AgentState:
     """jsut for fun"""
@@ -262,6 +273,7 @@ agentGraph.add_node("rag_system",prepare_rag_windows)
 agentGraph.add_node("web_system", web_search)
 agentGraph.add_node("next_window", load_next_window)
 agentGraph.add_node("final_llm_answer", finalize_answer)
+agentGraph.add_node("clarity_check", reason_over_window)
 
 # create edges..
 agentGraph.add_conditional_edges(
@@ -272,19 +284,51 @@ agentGraph.add_conditional_edges(
         "WEB_SEARCH" : "web_system",
     }
 )
-agentGraph.add_edge("rag_system", "final_llm_answer")
-agentGraph.add_edge("web_system", "final_llm_answer")
+
+# agentGraph.add_edge("rag_system", "next_window")
+agentGraph.add_edge("rag_system", "clarity_check")
+agentGraph.add_edge("web_system", "clarity_check")
+agentGraph.add_edge("next_window", "clarity_check")
 
 agentGraph.add_conditional_edges(
-    "final_llm_answer",
+    "clarity_check",
     decide_next_step,
     {
         "NEXT_WINDOW" : "next_window",
         "WEB_SEARCH" : "web_system",
-        "FINISHED" : END,
+        "FINISHED" : "final_llm_answer",
     }
 )
 
-agentGraph.add_edge("next_window", "final_llm_answer")
+agentGraph.add_edge("final_llm_answer", END)
 
 app = agentGraph.compile()
+
+def _initial_state(query: str, doc_id: str | None = None) -> AgentState:
+    return {
+        "messages": [],
+        "query": query,
+        "doc_id": doc_id,
+        "chunk_ids": [],
+        "cursor": 0,
+        "window": 4050,
+        "slide_window": int(4050 * 0.15),
+        "context": "",
+        "current_window": "",
+        "all_window": [],
+        "running_summary": "",
+        "final_answer": "",
+        "enough": False,
+        "use_web": False,
+        "source": "",
+        "rest": 0,
+    }
+
+async def async_final_answer(query: str, doc_id: str | None = None) -> str:
+    """Async graph entrypoint for FastAPI or other async callers."""
+    result = await app.ainvoke(_initial_state(query, doc_id))
+    return result.get("final_answer", "")
+
+def final_answer(query:str, doc_id:str |None=None):
+    """Finally gives the final response from the big llm generated"""
+    return asyncio.run(async_final_answer(query, doc_id))
