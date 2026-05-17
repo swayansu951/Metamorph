@@ -3,11 +3,9 @@ import pickle
 import re
 import faiss
 import numpy as np
-from simple_rag.database.embedder import model
+from simple_rag.database.embedder import embed_model
 from simple_rag.database.load_pdf import extract_load_pdf
 from simple_rag.database.semantic_chunker import semantic_chunker
-
-dim = model.get_sentence_embedding_dimension()
 
 def tokenize(text):
     """tokenize the texts"""
@@ -28,13 +26,14 @@ def ingest_pdf(file_path, doc_id=None):
 
     text = extract_load_pdf(file_path)
     sentence = text.split(". ")
-    text_embedding = model.encode(sentence).astype("float32")
+    text_embedding = embed_model.encode(sentence).astype("float32")
+    dim = embed_model.get_sentence_embedding_dimension()
 
     doc_folder = documents_path / doc_id
     doc_folder.mkdir(parents=True, exist_ok=True)
 
     chunks = semantic_chunker(sentence, text_embedding)
-    chunk_embeddings = model.encode(chunks).astype("float32")
+    chunk_embeddings = embed_model.encode(chunks).astype("float32")
     chunk_index = faiss.IndexHNSWFlat(dim, 32)
     chunk_index.add(chunk_embeddings)
 

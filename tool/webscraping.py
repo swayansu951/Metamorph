@@ -9,7 +9,6 @@ import ollama
 import asyncio
 from langchain_core.tools import tool
 from llama_cpp import llama
-from sentence_transformers import CrossEncoder
 from duckduckgo_search import duckduckgo_search
 from crawl4ai.deep_crawling.scorers import KeywordRelevanceScorer
 from crawl4ai.markdown_generation_strategy import DefaultMarkdownGenerator
@@ -22,9 +21,20 @@ USE_LOCAL_SYSTEM = True
 # DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-reranker_model = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2', device="cuda") if torch.cuda.is_available() else CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2', device="cpu")
+reranker_model = None
 
 LOCAL_LLM = None
+
+def get_reranker_model():
+    """Load the reranker only when web fallback actually runs."""
+
+    global reranker_model
+    if reranker_model is None:
+        from sentence_transformers import CrossEncoder
+
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        reranker_model = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2', device=device)
+    return reranker_model
     
 async def web_scrape(url:list) -> list:
     """scrap web pages using a headless browser to retireve web content"""
@@ -70,7 +80,7 @@ def reranker(query: str, crawled_data: list):
     pair = [[query, item["text"]] for item in candidates[:25]]
 
     with torch.no_grad():
-        score = reranker_model.predict(pair)
+        score = get_reranker_model().predict(pair)
 
     ranked_indices = sorted(range(len(score)), key=lambda i: score[i], reverse=True)
     return [candidates[idx]["text"] for idx in ranked_indices[:3]]

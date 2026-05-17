@@ -1,4 +1,6 @@
-const API_BASE_URL = 'https://armed-component-cartridge.ngrok-free.dev';
+const API_BASE_URL = window.location.protocol === 'file:'
+    ? 'http://127.0.0.1:8000'
+    : window.location.origin;
 const REQUEST_HEADERS = API_BASE_URL.includes('ngrok-free.dev')
     ? { 'ngrok-skip-browser-warning': 'true' }
     : {};
@@ -10,6 +12,8 @@ const uploadBtn = document.getElementById('upload-btn');
 const pdfFileInput = document.getElementById('pdf-file');
 const docIdInput = document.getElementById('doc-id');
 const statusText = document.getElementById('status-text');
+const newSessionBtn = document.getElementById('new-session-btn');
+const sessionList = document.getElementById('session-list');
 const reviewPopup = document.getElementById('review-popup');
 const reviewerNameInput = document.getElementById('reviewer-name');
 const reviewFeedbackInput = document.getElementById('review-feedback');
@@ -20,10 +24,14 @@ const ratingButtons = Array.from(document.querySelectorAll('.rating-btn'));
 const reviewTagInputs = Array.from(document.querySelectorAll('.review-tags input[type="checkbox"]'));
 
 const REVIEWER_NAME_KEY = 'metamorph-reviewer-name';
+const SESSIONS_KEY = 'metamorph-chat-sessions';
+const ACTIVE_SESSION_KEY = 'metamorph-active-session';
 
 let isSending = false;
 let isUploading = false;
 let isReviewSubmitting = false;
+let sessions = [];
+let activeSessionId = '';
 let selectedRating = 0;
 let latestReviewContext = null;
 let hasShownFirstReviewPopup = false;
@@ -40,6 +48,151 @@ function appendMessage(text, sender) {
     chatBox.appendChild(msgDiv);
     chatBox.scrollTop = chatBox.scrollHeight;
     return msgDiv;
+}
+
+function createSession(title = 'New chat') {
+    const id = `session-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    return {
+        id,
+        title,
+        docId: '',
+        docName: '',
+        summary: 'No conversation yet.',
+        messages: [],
+        updatedAt: new Date().toISOString()
+    };
+}
+
+function saveSessions() {
+    try {
+        window.localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
+        window.localStorage.setItem(ACTIVE_SESSION_KEY, activeSessionId);
+    } catch (error) {
+        // Keep chat usable if local storage is blocked.
+    }
+}
+
+function getActiveSession() {
+    return sessions.find((session) => session.id === activeSessionId) || null;
+}
+
+function summarizeSession(session) {
+    const lastUser = [...session.messages].reverse().find((message) => message.sender === 'user');
+    const lastBot = [...session.messages].reverse().find((message) => message.sender === 'bot');
+    if (!lastUser && !lastBot) {
+        return 'No conversation yet.';
+    }
+    const userPart = lastUser ? `Q: ${lastUser.text}` : '';
+    const botPart = lastBot ? `A: ${lastBot.text}` : '';
+    return `${userPart} ${botPart}`.trim().slice(0, 170);
+}
+
+function renderSessions() {
+    sessionList.innerHTML = '';
+
+    if (!sessions.length) {
+        const emptyState = document.createElement('div');
+        emptyState.className = 'session-empty';
+        emptyState.textContent = 'No sessions yet.';
+        sessionList.appendChild(emptyState);
+        return;
+    }
+
+    sessions
+        .slice()
+        .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+        .forEach((session) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = `session-card${session.id === activeSessionId ? ' active' : ''}`;
+            button.dataset.sessionId = session.id;
+
+            const title = document.createElement('div');
+            title.className = 'session-card-title';
+            title.textContent = session.title || 'New chat';
+
+            const doc = document.createElement('div');
+            doc.className = 'session-card-doc';
+            const documentLabel = session.docName || session.docId;
+            doc.textContent = documentLabel ? `Document: ${documentLabel}` : 'Document: web only';
+
+            const summary = document.createElement('div');
+            summary.className = 'session-card-summary';
+            summary.textContent = session.summary || 'No conversation yet.';
+
+            button.append(title, doc, summary);
+            button.addEventListener('click', () => selectSession(session.id));
+            sessionList.appendChild(button);
+        });
+}
+
+function restoreChat(session) {
+    chatBox.innerHTML = '';
+    if (!session.messages.length) {
+        appendMessage('Hello! Upload a PDF to work from a document, or ask directly for web-backed help.', 'bot');
+        return;
+    }
+    session.messages.forEach((message) => appendMessage(message.text, message.sender));
+}
+
+function selectSession(sessionId) {
+    const session = sessions.find((item) => item.id === sessionId);
+    if (!session) {
+        return;
+    }
+    activeSessionId = session.id;
+    docIdInput.value = session.docId || '';
+    restoreChat(session);
+    setStatus(session.docId ? `Continuing with document: ${session.docId}` : 'Continuing a web-backed session.');
+    saveSessions();
+    renderSessions();
+}
+
+function startNewSession() {
+    const session = createSession();
+    sessions.unshift(session);
+    activeSessionId = session.id;
+    docIdInput.value = '';
+    latestReviewContext = null;
+    restoreChat(session);
+    setStatus('New chat started. Upload a PDF or ask a web-backed question.');
+    saveSessions();
+    renderSessions();
+    userInput.focus();
+}
+
+function updateActiveSession(updater) {
+    const session = getActiveSession();
+    if (!session) {
+        return;
+    }
+    updater(session);
+    session.summary = summarizeSession(session);
+    session.updatedAt = new Date().toISOString();
+    saveSessions();
+    renderSessions();
+}
+
+function loadSessions() {
+    try {
+        const stored = JSON.parse(window.localStorage.getItem(SESSIONS_KEY) || '[]');
+        sessions = Array.isArray(stored) ? stored : [];
+        activeSessionId = window.localStorage.getItem(ACTIVE_SESSION_KEY) || '';
+    } catch (error) {
+        sessions = [];
+        activeSessionId = '';
+    }
+
+    if (!sessions.length) {
+        startNewSession();
+        return;
+    }
+
+    if (!sessions.some((session) => session.id === activeSessionId)) {
+        activeSessionId = sessions[0].id;
+    }
+
+    selectSession(activeSessionId);
 }
 
 function setStatus(message, isError = false) {
@@ -175,6 +328,15 @@ async function uploadPdf() {
 
         const data = await response.json();
         docIdInput.value = data.doc_id || '';
+        updateActiveSession((session) => {
+            session.docId = docIdInput.value;
+            session.docName = file.name;
+            session.title = file.name.replace(/\.pdf$/i, '') || 'Document chat';
+            session.messages.push({
+                sender: 'bot',
+                text: `PDF uploaded. Using document ID: ${docIdInput.value}`
+            });
+        });
         setStatus(`PDF indexed successfully. Current document: ${docIdInput.value}`);
         appendMessage(`PDF uploaded. Using document ID: ${docIdInput.value}`, 'bot');
     } catch (error) {
@@ -193,17 +355,12 @@ async function sendMessage() {
         return;
     }
 
-    if (!docId) {
-        setStatus('Upload a PDF or enter a document ID before chatting.', true);
-        return;
-    }
-
     appendMessage(text, 'user');
     userInput.value = '';
 
     isSending = true;
     updateButtonState();
-    setStatus(`Asking questions about "${docId}"...`);
+    setStatus(docId ? `Asking questions about "${docId}"...` : 'Asking with web fallback...');
 
     const botMessage = appendMessage('Thinking...', 'bot');
 
@@ -234,7 +391,13 @@ async function sendMessage() {
                 };
                 maybeShowFirstReviewPopup();
             }
-            setStatus(`Connected to document: ${docId}`);
+            updateActiveSession((session) => {
+                session.docId = docId;
+                session.title = session.title === 'New chat' ? text.slice(0, 48) || 'New chat' : session.title;
+                session.messages.push({ sender: 'user', text });
+                session.messages.push({ sender: 'bot', text: directResponse });
+            });
+            setStatus(docId ? `Connected to document: ${docId}` : 'Answered with web fallback.');
             return;
         }
 
@@ -259,6 +422,12 @@ async function sendMessage() {
         fullText += decoder.decode();
         const finalAnswer = fullText.trim() ? fullText : 'No response generated.';
         botMessage.textContent = finalAnswer;
+        updateActiveSession((session) => {
+            session.docId = docId;
+            session.title = session.title === 'New chat' ? text.slice(0, 48) || 'New chat' : session.title;
+            session.messages.push({ sender: 'user', text });
+            session.messages.push({ sender: 'bot', text: finalAnswer });
+        });
         if (!hasShownFirstReviewPopup && !hasResolvedFirstReview) {
             latestReviewContext = {
                 query: text,
@@ -267,7 +436,7 @@ async function sendMessage() {
             };
             maybeShowFirstReviewPopup();
         }
-        setStatus(`Connected to document: ${docId}`);
+        setStatus(docId ? `Connected to document: ${docId}` : 'Answered with web fallback.');
     } catch (error) {
         botMessage.textContent = 'Sorry, I could not reach the chat service.';
         setStatus(error.message || 'Chat request failed.', true);
@@ -320,6 +489,7 @@ async function sendReview(reviewAction) {
 
 uploadBtn.addEventListener('click', uploadPdf);
 sendBtn.addEventListener('click', sendMessage);
+newSessionBtn.addEventListener('click', startNewSession);
 submitReviewBtn.addEventListener('click', () => sendReview('submitted'));
 skipReviewBtn.addEventListener('click', () => sendReview('skipped'));
 
@@ -331,6 +501,7 @@ ratingButtons.forEach((button) => {
 });
 
 loadReviewerName();
+loadSessions();
 updateButtonState();
 
 userInput.addEventListener('keydown', (event) => {

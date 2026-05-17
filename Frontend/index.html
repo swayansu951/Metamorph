@@ -4,93 +4,127 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Metamorph</title>
-        <link rel="stylesheet" href="style.css">
+        <link rel="stylesheet" href="/static/style.css">
     </head>
     <body>
-        <div class="chat-container">
-            <div class="app-title">Metamorph</div>
-            <div class="toolbar">
-                <div class="upload-row">
-                    <input id="pdf-file" type="file" accept=".pdf">
-                    <button id="upload-btn" type="button">Upload PDF</button>
+        <div class="app-shell">
+            <header class="app-header">
+                <div class="brand-lockup" aria-label="Metamorph">
+                    <svg class="brand-mark" viewBox="0 0 100 100" role="img" aria-label="Metamorph symbol">
+                        <circle cx="50" cy="50" r="9"></circle>
+                        <path d="M50 41V14M50 59v27M41 50H12M59 50h29M44 43L25 24M56 43l18-22M44 57 25 76M56 57l20 18M38 47 22 39M62 47l18-8M38 53l-18 8M62 53l18 8"></path>
+                        <circle cx="50" cy="14" r="4"></circle>
+                        <circle cx="50" cy="86" r="4"></circle>
+                        <circle cx="12" cy="50" r="4"></circle>
+                        <circle cx="88" cy="50" r="4"></circle>
+                        <circle cx="25" cy="24" r="4"></circle>
+                        <circle cx="74" cy="21" r="4"></circle>
+                        <circle cx="25" cy="76" r="4"></circle>
+                        <circle cx="76" cy="75" r="4"></circle>
+                        <circle cx="22" cy="39" r="3"></circle>
+                        <circle cx="80" cy="39" r="3"></circle>
+                        <circle cx="20" cy="61" r="3"></circle>
+                        <circle cx="80" cy="61" r="3"></circle>
+                    </svg>
+                    <span>Metamorph</span>
                 </div>
-                <input
-                    id="doc-id"
-                    type="text"
-                    placeholder="Document ID (upload a PDF or enter an existing one)"
-                >
-                <div id="status-text" class="status-text">
-                    Upload a PDF or enter a document ID to start chatting.
-                </div>
-            </div>
+            </header>
 
-            <div id="chat-box" class="chat-content">
-                <div class="message bot">
-                    Hello! Upload a PDF or enter a document ID, then ask your question.
-                </div>
-            </div>
-
-            <div id="review-popup" class="review-popup hidden" aria-hidden="true">
-                <div class="review-popup-card">
-                    <div class="review-header">
-                        <div class="review-title">Review the first answer</div>
-                        <div id="review-status" class="review-status">
-                            Share feedback or skip it.
+            <main class="workspace">
+                <section class="chat-container">
+                    <div class="toolbar">
+                        <div class="upload-row">
+                            <input id="pdf-file" type="file" accept=".pdf">
+                            <button id="upload-btn" type="button">Upload PDF</button>
+                        </div>
+                        <input
+                            id="doc-id"
+                            type="text"
+                            placeholder="Document ID (optional; leave empty for web search)"
+                        >
+                        <div id="status-text" class="status-text">
+                            Start a chat with a PDF document or ask a web-backed question.
                         </div>
                     </div>
 
-                    <label class="review-field">
-                        <span>Reviewer name</span>
-                        <input id="reviewer-name" type="text" placeholder="Enter your name">
-                    </label>
-
-                    <div class="review-field">
-                        <span>Rating</span>
-                        <div id="rating-group" class="rating-group" role="radiogroup" aria-label="Answer rating">
-                            <button class="rating-btn" type="button" data-rating="1" aria-pressed="false">1</button>
-                            <button class="rating-btn" type="button" data-rating="2" aria-pressed="false">2</button>
-                            <button class="rating-btn" type="button" data-rating="3" aria-pressed="false">3</button>
-                            <button class="rating-btn" type="button" data-rating="4" aria-pressed="false">4</button>
-                            <button class="rating-btn" type="button" data-rating="5" aria-pressed="false">5</button>
+                    <div id="chat-box" class="chat-content">
+                        <div class="message bot">
+                            Hello! Upload a PDF to work from a document, or ask directly for web-backed help.
                         </div>
                     </div>
 
-                    <div class="review-field">
-                        <span>Quick checks</span>
-                        <div class="review-tags">
-                            <label class="tag-option">
-                                <input type="checkbox" value="accurate answer">
-                                <span>Accurate answer</span>
+                    <div id="review-popup" class="review-popup hidden" aria-hidden="true">
+                        <div class="review-popup-card">
+                            <div class="review-header">
+                                <div class="review-title">Review the first answer</div>
+                                <div id="review-status" class="review-status">Share feedback or skip it.</div>
+                            </div>
+
+                            <label class="review-field">
+                                <span>Reviewer name</span>
+                                <input id="reviewer-name" type="text" placeholder="Enter your name">
                             </label>
-                            <label class="tag-option">
-                                <input type="checkbox" value="first response">
-                                <span>First response</span>
+
+                            <div class="review-field">
+                                <span>Rating</span>
+                                <div id="rating-group" class="rating-group" role="radiogroup" aria-label="Answer rating">
+                                    <button class="rating-btn" type="button" data-rating="1" aria-pressed="false">1</button>
+                                    <button class="rating-btn" type="button" data-rating="2" aria-pressed="false">2</button>
+                                    <button class="rating-btn" type="button" data-rating="3" aria-pressed="false">3</button>
+                                    <button class="rating-btn" type="button" data-rating="4" aria-pressed="false">4</button>
+                                    <button class="rating-btn" type="button" data-rating="5" aria-pressed="false">5</button>
+                                </div>
+                            </div>
+
+                            <div class="review-field">
+                                <span>Quick checks</span>
+                                <div class="review-tags">
+                                    <label class="tag-option">
+                                        <input type="checkbox" value="accurate answer">
+                                        <span>Accurate answer</span>
+                                    </label>
+                                    <label class="tag-option">
+                                        <input type="checkbox" value="first response">
+                                        <span>First response</span>
+                                    </label>
+                                    <label class="tag-option">
+                                        <input type="checkbox" value="followed query correctly">
+                                        <span>Followed query correctly</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <label class="review-field">
+                                <span>Notes</span>
+                                <textarea id="review-feedback" rows="2" placeholder="Optional feedback"></textarea>
                             </label>
-                            <label class="tag-option">
-                                <input type="checkbox" value="followed query correctly">
-                                <span>Followed query correctly</span>
-                            </label>
+
+                            <div class="review-actions">
+                                <button id="skip-review-btn" class="secondary-btn" type="button">Skip</button>
+                                <button id="submit-review-btn" type="button">Send Review</button>
+                            </div>
                         </div>
                     </div>
 
-                    <label class="review-field">
-                        <span>Notes</span>
-                        <textarea id="review-feedback" rows="2" placeholder="Optional feedback"></textarea>
-                    </label>
-
-                    <div class="review-actions">
-                        <button id="skip-review-btn" class="secondary-btn" type="button">Skip</button>
-                        <button id="submit-review-btn" type="button">Send Review</button>
+                    <div class="input-area">
+                        <textarea id="user-input" placeholder="Type a message here.." rows="1"></textarea>
+                        <button id="send-btn" type="button">Send</button>
                     </div>
-                </div>
-            </div>
+                </section>
 
-            <div class="input-area">
-                <textarea id="user-input" placeholder="Type a message here.." rows="1"></textarea>
-                <button id="send-btn" type="button">Send</button>
-            </div>
+                <aside class="session-panel" aria-label="Chat sessions">
+                    <div class="session-panel-header">
+                        <div>
+                            <div class="session-title">Sessions</div>
+                            <div class="session-subtitle">Documents and short memory</div>
+                        </div>
+                        <button id="new-session-btn" class="session-action" type="button">New</button>
+                    </div>
+                    <div id="session-list" class="session-list"></div>
+                </aside>
+            </main>
         </div>
 
-        <script src="script.js"></script>
+        <script src="/static/script.js"></script>
     </body>
 </html>

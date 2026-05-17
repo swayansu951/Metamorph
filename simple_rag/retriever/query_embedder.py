@@ -1,6 +1,4 @@
-from sentence_transformers import SentenceTransformer
-from simple_rag.database.embedder import model
-model = model
+from simple_rag.database.embedder import embed_model as model
 
 def embed_query(query):
     return model.encode([query]).astype('float32')
