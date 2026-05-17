@@ -224,7 +224,7 @@ function loadSessions() {
 
 function setStatus(message, isError = false) {
     statusText.textContent = message;
-    statusText.style.color = '#3A2D28';
+    statusText.style.color = '#403d00';
     statusText.style.fontWeight = isError ? '700' : '400';
 }
 
@@ -241,7 +241,7 @@ function isReviewPopupVisible() {
 
 function setReviewStatus(message, isError = false) {
     reviewStatus.textContent = message;
-    reviewStatus.style.color = isError ? '#5F1C14' : '#3A2D28';
+    reviewStatus.style.color = isError ? '#403d00' : '#403d00';
     reviewStatus.style.fontWeight = isError ? '700' : '400';
 }
 

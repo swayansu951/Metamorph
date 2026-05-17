@@ -1,13 +1,13 @@
 :root {
-    --ink: #261f16;
-    --olive: #353400;
-    --olive-deep: #292900;
-    --olive-soft: #565313;
-    --gold: #efe75b;
-    --gold-soft: #fbf5bb;
+    --ink: #403d00;
+    --olive: #403d00;
+    --olive-deep: #403d00;
+    --olive-soft: #8f7364;
+    --gold: #c8ad90;
+    --gold-soft: #c8ad90;
     --paper: #c8ad90;
-    --panel: #a48573;
-    --line: rgba(38, 31, 22, 0.72);
+    --panel: #8f7364;
+    --line: #403d00;
 }
 
 * {
@@ -17,9 +17,7 @@
 body {
     min-height: 100vh;
     margin: 0;
-    background:
-        radial-gradient(circle at 14% 10%, rgba(239, 231, 91, 0.18), transparent 24%),
-        linear-gradient(135deg, #403d00 0%, #c8ad90 58%, #8f7364 100%);
+    background: linear-gradient(135deg, #403d00 0%, #c8ad90 58%, #8f7364 100%);
     color: var(--ink);
     font-family: "Segoe UI", "Trebuchet MS", sans-serif;
 }
@@ -55,7 +53,7 @@ textarea {
     font-weight: 800;
     font-size: clamp(22px, 4vw, 44px);
     letter-spacing: 0;
-    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
+    text-shadow: 0 2px 12px #403d00;
 }
 
 .brand-lockup > div {
@@ -66,7 +64,7 @@ textarea {
 
 .brand-lockup small {
     margin-top: 8px;
-    color: rgba(251, 245, 187, 0.72);
+    color: #c8ad90;
     font-size: clamp(10px, 1.5vw, 13px);
     font-weight: 700;
     letter-spacing: 0.28em;
@@ -85,11 +83,11 @@ textarea {
     min-height: 0;
     display: flex;
     flex-direction: column;
-    background: rgba(200, 173, 144, 0.92);
+    background: #c8ad90;
     border: 1px solid var(--line);
     border-radius: 8px;
     overflow: hidden;
-    box-shadow: 0 20px 60px rgba(38, 31, 22, 0.18);
+    box-shadow: 0 20px 60px #403d00;
 }
 
 .toolbar {
@@ -97,7 +95,7 @@ textarea {
     display: flex;
     flex-direction: column;
     gap: 12px;
-    background: rgba(164, 133, 115, 0.95);
+    background: #8f7364;
     border-bottom: 1px solid var(--line);
 }
 
@@ -115,7 +113,7 @@ textarea {
     padding: 10px 12px;
     border: 1px solid var(--line);
     border-radius: 6px;
-    background: rgba(255, 248, 226, 0.34);
+    background: #c8ad90;
     color: var(--ink);
 }
 
@@ -146,7 +144,7 @@ textarea {
 
 .chat-content {
     scrollbar-width: thin;
-    scrollbar-color: var(--olive-soft) rgba(164, 133, 115, 0.7);
+    scrollbar-color: #8f7364 #c8ad90;
 }
 
 .review-popup {
@@ -166,10 +164,10 @@ textarea {
     display: flex;
     flex-direction: column;
     gap: 12px;
-    background: #b29281;
+    background: #8f7364;
     border: 1px solid var(--line);
     border-radius: 8px;
-    box-shadow: 0 14px 28px rgba(38, 31, 22, 0.18);
+    box-shadow: 0 14px 28px #403d00;
 }
 
 .review-header,
@@ -224,7 +222,7 @@ textarea {
     padding: 8px 12px;
     border: 1px solid var(--line);
     border-radius: 999px;
-    background: rgba(255, 248, 226, 0.28);
+    background: #c8ad90;
 }
 
 .tag-option input {
@@ -258,7 +256,7 @@ textarea {
 
 .bot {
     align-self: flex-start;
-    background: rgba(164, 133, 115, 0.9);
+    background: #8f7364;
     border: 1px solid var(--line);
 }
 
@@ -266,7 +264,7 @@ textarea {
     padding: 16px 18px;
     display: flex;
     gap: 12px;
-    background: rgba(164, 133, 115, 0.95);
+    background: #8f7364;
     border-top: 1px solid var(--line);
 }
 
@@ -277,7 +275,7 @@ textarea {
 }
 
 button {
-    background: rgba(255, 248, 226, 0.28);
+    background: #c8ad90;
     color: var(--ink);
     border: 1px solid var(--line);
     padding: 10px 18px;
@@ -300,14 +298,12 @@ button:disabled {
     min-height: 0;
     display: flex;
     flex-direction: column;
-    background:
-        radial-gradient(circle at 0% 0%, rgba(239, 231, 91, 0.15), transparent 34%),
-        linear-gradient(180deg, rgba(53, 52, 0, 0.96), rgba(41, 41, 0, 0.92));
+    background: linear-gradient(180deg, #403d00, #8f7364);
     color: var(--gold-soft);
-    border: 1px solid rgba(239, 231, 91, 0.35);
+    border: 1px solid #c8ad90;
     border-radius: 18px;
     overflow: hidden;
-    box-shadow: 0 20px 60px rgba(38, 31, 22, 0.2);
+    box-shadow: 0 20px 60px #403d00;
 }
 
 .session-panel-header {
@@ -316,7 +312,7 @@ button:disabled {
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    border-bottom: 1px solid rgba(239, 231, 91, 0.25);
+    border-bottom: 1px solid #c8ad90;
 }
 
 .session-title {
@@ -327,23 +323,23 @@ button:disabled {
 .session-subtitle {
     margin-top: 3px;
     font-size: 12px;
-    color: rgba(251, 245, 187, 0.76);
+    color: #c8ad90;
 }
 
 .session-action {
     color: var(--gold-soft);
-    border-color: rgba(239, 231, 91, 0.45);
+    border-color: #c8ad90;
     white-space: nowrap;
 }
 
 .session-hint {
     margin: 14px 14px 0;
     padding: 12px;
-    color: rgba(251, 245, 187, 0.76);
+    color: #c8ad90;
     font-size: 12px;
     line-height: 1.45;
-    background: rgba(255, 248, 226, 0.07);
-    border: 1px solid rgba(239, 231, 91, 0.18);
+    background: #8f7364;
+    border: 1px solid #c8ad90;
     border-radius: 14px;
 }
 
@@ -361,16 +357,14 @@ button:disabled {
     padding: 14px;
     text-align: left;
     color: var(--gold-soft);
-    background:
-        linear-gradient(135deg, rgba(255, 248, 226, 0.1), rgba(255, 248, 226, 0.035));
-    border: 1px solid rgba(239, 231, 91, 0.24);
+    background: linear-gradient(135deg, #8f7364, #403d00);
+    border: 1px solid #c8ad90;
     border-radius: 16px;
 }
 
 .session-card.active {
-    background:
-        linear-gradient(135deg, rgba(239, 231, 91, 0.18), rgba(255, 248, 226, 0.06));
-    border-color: rgba(239, 231, 91, 0.7);
+    background: linear-gradient(135deg, #c8ad90, #8f7364);
+    border-color: #403d00;
 }
 
 .session-card-topline {
@@ -402,14 +396,14 @@ button:disabled {
 .session-card-summary {
     font-size: 12px;
     line-height: 1.45;
-    color: rgba(251, 245, 187, 0.78);
+    color: #c8ad90;
 }
 
 .session-card-doc span,
 .session-card-summary span {
     display: block;
     margin: 10px 0 3px;
-    color: rgba(239, 231, 91, 0.94);
+    color: #c8ad90;
     font-size: 10px;
     font-weight: 900;
     letter-spacing: 0.12em;
@@ -418,14 +412,14 @@ button:disabled {
 
 .session-card-updated {
     margin-top: 12px;
-    color: rgba(251, 245, 187, 0.55);
+    color: #c8ad90;
     font-size: 11px;
 }
 
 .session-empty {
     padding: 14px;
     font-size: 13px;
-    color: rgba(251, 245, 187, 0.72);
+    color: #c8ad90;
 }
 
 @media (max-width: 900px) {
