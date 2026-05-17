@@ -18,6 +18,18 @@ from langchain_core.messages import trim_messages, BaseMessage, SystemMessage, H
 
 class AgentState(TypedDict):
     messages : Annotated[Sequence[BaseMessage], add_messages]
+    query : str
+    doc_id : Optional[str]
+    chunk_ids : list[int]
+    cursor : int 
+    context : str
+    current_window : str
+    all_window : list[str]
+    running_summary : str
+    final_answer : str
+    enough : bool
+    use_web : bool
+    rest : int
 
 # Simple RAG response generator
 generator = GENERATE()
@@ -120,15 +132,15 @@ class AgentState2(TypedDict):
     use_web : bool
     rest : int
 
-def prepare_rag_windows(state:AgentState2) -> AgentState2:
+def prepare_rag_windows(state:AgentState) -> AgentState:
     """"prepares the chunk window and the window split from the retireved context.
         1. Set the window size, e.g. 4000 from the original context retrieved.
         2. Slider window to be 10 - 15 % of the window size.
         3. set the cursor original pointer at 0.
         4. Set the current window be the slider window which feed the context to the LLM.
     """
-    state["context"] = generator.generate(user_input=state["query"], doc_id=state["doc_id"])
-    window = state.get("window", 4000)
+    context = generator.generate(user_input=state["query"], doc_id=state["doc_id"])
+    window = state.get("context", 4050)
     slider_window = state.get("slide_window", int(window * 0.15))
 
     spliter = RecursiveCharacterTextSplitter(
@@ -138,45 +150,19 @@ def prepare_rag_windows(state:AgentState2) -> AgentState2:
                                 )
     windows = spliter.split_text(state["context"])
     
-    state["window"] = window
-    state["slide_window"] = slider_window
-    state["cursor"] = 0
-    state["all_window"] = windows
-    state["current_window"] = windows[0] if windows else ""
-    state["rest"] = state["window"] - state["slide_window"]
-    
-    return state
+    return {
+    "context": context,
+    "window": window,
+    "slide_window": slider_window,
+    "cursor": 0,
+    "all_window": windows,
+    "current_window": windows[0] if windows else "",
+    "rest": window - slider_window
+    }
 
-def load_next_window(state:AgentState2) -> AgentState2:
-    """slide the current window slider to the next if the info is not relevent"""
-    
-    state["cursor"] += 1
-    state["current_window"] = state["all_window"][state["cursor"]]
-    return state
-
-def reason_over_window(state:AgentState2) -> AgentState2:
-    """llm on that window to decide which path to take, RAG_SEARCH or WEB_SEARCH"""
-    pass
-
-def decide_next_step(state:AgentState2) -> AgentState2:
-    """decide if need more context/window, then slide window"""
-    
-    state["cursor"] += 1
-    if len(state["running_summary"]) < 0: state["use_web"] = True ; return "WEB_SEARCH"
-    
-    elif (state["current_window"] == ""): state["use_web"] = True ; return "WEB_SEARCH"
-
-    elif (state["cursor"] < len(state["all_window"])): 
-        state["use_web"] = False
-        state["current_window"] = state["all_window"][state["cursor"]]
-
-        return "RAG_SEARCH"
-    
-    else: state["use_web"] = True ;  return "WEB_SEARCH"
-
-def web_search(state:AgentState2) -> AgentState2:
+def web_search(state:AgentState) -> AgentState:
     """call web_search tool for retireve information from web if no document or less precise info in document"""
-    state["context"] = run_pipeline(state["query"], url=[URLS["finance"],
+    context = run_pipeline(state["query"], url=[URLS["finance"],
                                                          URLS["geography"],
                                                          URLS["health"],
                                                          URLS["legals"],
@@ -193,25 +179,112 @@ def web_search(state:AgentState2) -> AgentState2:
                                 )
     windows = spliter.split_text(state["context"])
 
-    state["window"] = window
-    state["slide_window"] = slider_window
-    state["cursor"] = 0
-    state["all_window"] = windows
-    state["current_window"] = windows[0] if windows else ""
-    state["rest"] = state["window"] - state["slide_window"]
+    return {
+    "context": context,
+    "window": window,
+    "slide_window": slider_window,
+    "cursor": 0,
+    "all_window": windows,
+    "current_window": windows[0] if windows else "",
+    "rest": window - slider_window
+    }
 
-    return state
-
-def finalize_answer(state:AgentState2) -> AgentState2:
-    """Retrieves the final answer"""
-    if "WEB_SEARCH":
-        state["final_answer"] += state["all_window"]
-
-    else :
-        state["final_answer"] += state["current_window"]
+def load_next_window(state:AgentState) -> AgentState:
+    """slide the current window slider to the next if the info is not relevent"""
     
-    return state
+    next_cursor = state["cursor"] + 1
+    all_window = state["all_window"]
+    
+    if next_cursor < len(all_window):
+        return {
+            "cursor": next_cursor,
+            "current_window": all_window[next_cursor]
+        }
+    return {"current_window": ""}
+
+def reason_over_window(state:AgentState) -> AgentState:
+    """llm on that window to decide which path to take, RAG_SEARCH or WEB_SEARCH"""
+    pass
+
+def decide_next_step(state:AgentState) -> AgentState:
+    """decide if need more context/window, then slide window"""
+    
+    current_cursor = state.get("cursor", 0)
+    all_w = state.get("all_window", [])
+    
+    # If we have run out of window chunks in the current data source
+    if current_cursor >= len(all_w) - 1:
+        # If we finished RAG windows but haven't tried web yet, fallback to web
+        if not state.get("use_web") and state.get("doc_id"):
+            return "WEB_SEARCH"
+        return "FINISH"
+        
+    return "NEXT_WINDOW"
+    # state["cursor"] += 1
+    
+    # if (state["current_window"] == "") or (state["doc_id"] == "") : state["use_web"] = True ; return "WEB_SEARCH"
+
+    # elif (state["cursor"] < len(state["all_window"])): 
+    #     state["use_web"] = False
+    #     state["current_window"] = state["all_window"][state["cursor"]]
+
+    #     return "RAG_SEARCH"
+    
+    # else: state["use_web"] = True ;  return "WEB_SEARCH"
+
+def decide_initial_routing(state: AgentState) -> str:
+    """Decides where to go immediately after START"""
+    # If no doc_id exists, skip RAG completely and fetch from Web
+    if not state.get("doc_id"):
+        return "WEB_SEARCH"
+    return "RAG_SEARCH"
+
+def finalize_answer(state:AgentState) -> AgentState:
+    """Retrieves the final answer from big llm"""
+
+    prompt = (
+            f"from the user query : {state["query"]}"
+            f"retireve answer from the context : {state["current_window"]} \n"
+            f"please give a comprihensive well structured response for the user"
+              )
+    response = llm_model.invoke([HumanMessage(content=prompt)]).content
+   
+    return {"response" : response}
 
 def graph(state:AgentState) -> AgentState:
     """jsut for fun"""
     pass
+
+agentGraph = StateGraph(AgentState)
+
+# create nodes..
+agentGraph.add_node("rag_system",prepare_rag_windows)
+agentGraph.add_node("web_system", web_search)
+agentGraph.add_node("next_window", load_next_window)
+agentGraph.add_node("final_llm_answer", finalize_answer)
+
+# create edges..
+agentGraph.add_conditional_edges(
+    START,
+    decide_initial_routing,
+    {
+        "RAG_SEARCH" : "rag_system",
+        "WEB_SEARCH" : "web_system",
+    }
+)
+agentGraph.add_edge("rag_system", "final_llm_answer")
+agentGraph.add_edge("web_system", "final_llm_answer")
+
+agentGraph.add_conditional_edges(
+    "final_llm_answer",
+    decide_next_step,
+    {
+        "NEXT_WINDOW" : "next_window",
+        "WEB_SEARCH" : "web_system",
+        "FINISHED" : END,
+    }
+)
+
+agentGraph.add_edge("next_window", "final_llm_answer")
+
+app = agentGraph.compile()

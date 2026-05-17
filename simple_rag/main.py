@@ -49,7 +49,13 @@ class GENERATE:
             {"role": "user", "content": question_prompt},
         ]
 
-        response = ollama.chat(model='llama3.1:8b-instruct-q5_K_S', messages=self.messages, stream=True, options={"num_thread":8}, keep_alive="1m")
+        response = ollama.chat(model='llama3.2:3b', 
+                               messages=self.messages, 
+                               stream=True, 
+                               options={'num_gpu':-1,
+                                        }, 
+                               keep_alive="1m",
+                               )
 
         for chunk in response:
             content = chunk.get("message", {}).get("content", "")
@@ -60,6 +66,7 @@ class GENERATE:
             if final_text:
                 yield final_text
 
+# CLI interface only..
 def main():
     rag = GENERATE()
    
