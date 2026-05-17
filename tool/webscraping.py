@@ -98,13 +98,14 @@ def generate_response(query:str, context:list):
         f"<|start_header_id|>assistant<|end_header_id|>\n\n"
     )
     
-    response = ollama.chat(model="llama3.1:8b-instruct-q5_K_S", 
+    response = ollama.chat(model="llama3.2:3b", 
                                     stream=True, 
                                     think="medium", 
                                     options={"temperature" :0.1,
                                             "num_ctx" : 4000,
                                             "num_predict" : 512,
-                                            "format" : "json"},
+                                            'num_gpu' : -1,
+                                            },
                                     prompt=FULL_PROMPT
                                     )
     for chunk in response:
@@ -117,22 +118,25 @@ def generate_response(query:str, context:list):
             if final_text:
                 yield final_text
 @tool
-async def run_pipeline(query: str, url:list): # set pre defined urls to use only not more that that, change: url
-    """Runs the webscraping pipeline to retrieve information according to the users query"""
+async def run_pipeline(query: str, url:dict): # set pre defined urls to use only not more that that, change: url
+    """Runs the webscraping pipeline to retrieve information according to the users query
+        1. set the query : str with hardcoded url : dict in dictionary format separating the different types of urls based on task
+        2. run reranker funcion as output and connect to the llm for final response
+    """
     
-    print("::: STEP1 ::: ")
+    # ::: STEP1 ::: 
     raw_data = await web_scrape(url=url)
 
-    print("::: STEP2 :::")
+    # ::: STEP2 :::
     refined_page = reranker(query=query, crawled_data=raw_data)
 
-    print("::: STEP3 :::")
-    final_output = generate_response(query=query, context=refined_page)     
+    # ::: STEP3 :::
+    # if use CLI and run separately then generate answer by calling this function otherwise only the final answer connect to the main llm    
+    final_output = generate_response(query=query, context=refined_page)   
 
-    print("::: FINAL OUTPUT :::")
-    print(final_output)
-
-    return final_output
+    # #if test only this then uncomment this
+    # ::: FINAL OUTPUT :::
+    return final_output 
 
 # hard code the web pages to scrap 
 # user query
