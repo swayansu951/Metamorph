@@ -1,8 +1,13 @@
+import sys
+import asyncio
+if sys.platform.startswith("win"):
+    asyncio.set_event_loop_policy(
+        asyncio.WindowsProactorEventLoopPolicy()
+    )
+
 import os
 import re
-import sys
 import json
-import asyncio
 from pathlib import Path
 from typing import List, Optional
 from pydantic import BaseModel, Field
@@ -27,11 +32,7 @@ from query_router import async_final_answer
 
 app = FastAPI()
 
-if sys.platform.startswith("win"):
-    asyncio.set_event_loop_policy(
-        asyncio.WindowsProactorEventLoopPolicy()
-    )
-    
+
 app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
 app.add_middleware(
