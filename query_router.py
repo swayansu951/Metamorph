@@ -79,6 +79,18 @@ class AgentState2(TypedDict):
     use_web : bool
     rest : int
 
+def direct_answer(state: AgentState) -> AgentState:
+    """Direct llm response carried by it and generate response"""
+
+    prompt = f"""
+Answer the user normally and briefly.
+If they ask about a PDF but no document is selected, tell them to upload/select a PDF first.
+
+User: {state["query"]}
+"""
+    response = llm_model.invoke([HumanMessage(content=prompt)]).content
+    return {"final_answer": response}
+
 def prepare_rag_windows(state:AgentState) -> AgentState:
     """"prepares the chunk window and the window split from the retireved context.
         1. Set the window size, e.g. 4000 from the original context retrieved.
@@ -107,8 +119,10 @@ def prepare_rag_windows(state:AgentState) -> AgentState:
     "source": "rag",
     "rest": window - slider_window
     }
-
+# To get a asyncio and safe web search result fit to the websearch tool writen(async function)
 def _stringify_context(context) -> str:
+    """checks and handle mulultiple query input type without throughing error for the web_query"""
+
     if context is None:
         return ""
     if isinstance(context, str):
@@ -119,6 +133,8 @@ def _stringify_context(context) -> str:
         return str(context)
 
 async def _run_web_pipeline(query: str) -> str:
+    """run asyncio web search pipeline"""
+
     if hasattr(run_pipeline, "ainvoke"):
         context = await run_pipeline.ainvoke({"query": query, "url": URLS})
     else:
@@ -226,9 +242,6 @@ def decide_next_step(state:AgentState) -> AgentState:
 
     if current_cursor < len(all_w) - 1:
         return "NEXT_WINDOW"
-    
-    if state.get("source") == "rag":
-        return "WEB_SEARCH"
 
     return "FINISHED"
     # state["cursor"] += 1
@@ -243,9 +256,37 @@ def decide_next_step(state:AgentState) -> AgentState:
     
     # else: state["use_web"] = True ;  return "WEB_SEARCH"
 
+def route_query(state: AgentState) -> str:
+    """Route which path to take according to the user's query, rag or web or direct llm response"""
+
+    doc_id = state.get("doc_id")
+
+    prompt = f"""
+    You are a routing classifier. Return only one label:
+
+    DIRECT - greeting, random chat, general message, or no retrieval needed
+    RAG_SEARCH - user is asking about "from the doc" or "from the provided book",  the uploaded document and doc_id exists
+    WEB_SEARCH - user needs latest/current/external web information
+
+    doc_id: {doc_id or "none"}
+    user_message: {state["query"]}
+
+    Label:
+    """
+    decision = llm_model.invoke([HumanMessage(content=prompt)]).content.strip().upper()
+
+    if "RAG_SEARCH" in decision and doc_id:
+        return "RAG_SEARCH"
+
+    if "WEB_SEARCH" in decision:
+        return "WEB_SEARCH"
+
+    return "LLM_RESPONSE"
+
 def decide_initial_routing(state: AgentState) -> str:
     """Decides where to go immediately after START"""
     # If no doc_id exists, skip RAG completely and fetch from Web
+
     if not state.get("doc_id"):
         return "WEB_SEARCH"
     return "RAG_SEARCH"
@@ -257,7 +298,10 @@ def finalize_answer(state:AgentState) -> AgentState:
             f"from the user query : {state['query']}\n"
             f"retireve answer from the context : {state['current_window']} \n"
             f"please give a comprihensive well structured response for the user"
+            f"Answer only using the context"
+            f"if the context does not contain the answer, say you could not find it from the uploaded document."
               )
+    
     response = llm_model.invoke([HumanMessage(content=prompt)]).content
    
     return {"final_answer" : response}
@@ -269,6 +313,7 @@ def graph(state:AgentState) -> AgentState:
 agentGraph = StateGraph(AgentState)
 
 # create nodes..
+agentGraph.add_node("llm_direct", direct_answer)
 agentGraph.add_node("rag_system",prepare_rag_windows)
 agentGraph.add_node("web_system", web_search)
 agentGraph.add_node("next_window", load_next_window)
@@ -278,10 +323,11 @@ agentGraph.add_node("clarity_check", reason_over_window)
 # create edges..
 agentGraph.add_conditional_edges(
     START,
-    decide_initial_routing,
+    route_query,
     {
         "RAG_SEARCH" : "rag_system",
         "WEB_SEARCH" : "web_system",
+        "LLM_RESPONSE" : "llm_direct", # to be added in the decide_initial_routing
     }
 )
 
@@ -289,13 +335,13 @@ agentGraph.add_conditional_edges(
 agentGraph.add_edge("rag_system", "clarity_check")
 agentGraph.add_edge("web_system", "clarity_check")
 agentGraph.add_edge("next_window", "clarity_check")
+agentGraph.add_edge("llm_direct", END)
 
 agentGraph.add_conditional_edges(
     "clarity_check",
     decide_next_step,
     {
         "NEXT_WINDOW" : "next_window",
-        "WEB_SEARCH" : "web_system",
         "FINISHED" : "final_llm_answer",
     }
 )
