@@ -1,15 +1,16 @@
 import os
+import re
 import sys
 import json
-import re
+import asyncio
 from pathlib import Path
-from datetime import datetime, timezone
 from typing import List, Optional
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from pydantic import BaseModel, Field
+from datetime import datetime, timezone
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
-from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 FRONTEND_DIR = PROJECT_ROOT / "Frontend"
@@ -26,6 +27,11 @@ from query_router import async_final_answer
 
 app = FastAPI()
 
+if sys.platform.startswith("win"):
+    asyncio.set_event_loop_policy(
+        asyncio.WindowsProactorEventLoopPolicy()
+    )
+    
 app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
 app.add_middleware(
