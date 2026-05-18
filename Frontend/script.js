@@ -129,6 +129,33 @@ async function saveSessionMemory(session) {
     }
 }
 
+async function deleteSessionMemory(sessionId) {
+    if (!sessionId) {
+        return;
+    }
+
+    try {
+        await fetch(`${API_BASE_URL}/session-memory/${encodeURIComponent(sessionId)}`, {
+            method: 'DELETE',
+            headers: createRequestHeaders()
+        });
+    } catch (error) {
+        // Local deletion should still work if backend memory is already unavailable.
+    }
+}
+
+async function persistSessionMemory(session) {
+    if (!session) {
+        return;
+    }
+
+    session.summary = summarizeSession(session);
+    session.updatedAt = new Date().toISOString();
+    saveSessions();
+    renderSessions();
+    await saveSessionMemory(session);
+}
+
 function formatSessionTime(value) {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) {
@@ -158,6 +185,9 @@ function renderSessions() {
         .slice()
         .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
         .forEach((session) => {
+            const cardShell = document.createElement('div');
+            cardShell.className = 'session-card-shell';
+
             const button = document.createElement('button');
             button.type = 'button';
             button.className = `session-card${session.id === activeSessionId ? ' active' : ''}`;
@@ -191,7 +221,18 @@ function renderSessions() {
 
             button.append(topLine, doc, summary, updated);
             button.addEventListener('click', () => selectSession(session.id));
-            sessionList.appendChild(button);
+
+            const deleteButton = document.createElement('button');
+            deleteButton.type = 'button';
+            deleteButton.className = 'session-delete';
+            deleteButton.textContent = 'Delete';
+            deleteButton.addEventListener('click', (event) => {
+                event.stopPropagation();
+                deleteSession(session.id);
+            });
+
+            cardShell.append(button, deleteButton);
+            sessionList.appendChild(cardShell);
         });
 }
 
@@ -219,7 +260,7 @@ async function selectSession(sessionId) {
     renderSessions();
 }
 
-function startNewSession() {
+function createFreshSession() {
     const session = createSession();
     sessions.unshift(session);
     activeSessionId = session.id;
@@ -232,13 +273,41 @@ function startNewSession() {
     userInput.focus();
 }
 
+async function startNewSession() {
+    await persistSessionMemory(getActiveSession());
+    createFreshSession();
+}
+
+async function deleteSession(sessionId) {
+    await deleteSessionMemory(sessionId);
+    const wasActiveSession = sessionId === activeSessionId;
+
+    sessions = sessions.filter((session) => session.id !== sessionId);
+
+    if (!sessions.length) {
+        activeSessionId = '';
+        saveSessions();
+        createFreshSession();
+        return;
+    }
+
+    if (wasActiveSession) {
+        activeSessionId = sessions[0].id;
+        saveSessions();
+        await selectSession(activeSessionId);
+        return;
+    }
+
+    saveSessions();
+    renderSessions();
+}
+
 function updateActiveSession(updater) {
     const session = getActiveSession();
     if (!session) {
         return null;
     }
     updater(session);
-    session.summary = summarizeSession(session);
     session.updatedAt = new Date().toISOString();
     saveSessions();
     renderSessions();
@@ -256,7 +325,7 @@ function loadSessions() {
     }
 
     if (!sessions.length) {
-        startNewSession();
+        createFreshSession();
         return;
     }
 
@@ -400,7 +469,7 @@ async function uploadPdf() {
 
         const data = await response.json();
         docIdInput.value = data.doc_id || '';
-        const updatedSession = updateActiveSession((session) => {
+        updateActiveSession((session) => {
             session.docId = docIdInput.value;
             session.docName = file.name;
             session.title = file.name.replace(/\.pdf$/i, '') || 'Document chat';
@@ -409,7 +478,6 @@ async function uploadPdf() {
                 text: `PDF uploaded. Using document ID: ${docIdInput.value}`
             });
         });
-        await saveSessionMemory(updatedSession);
         setStatus(`PDF indexed successfully. Current document: ${docIdInput.value}`);
         appendMessage(`PDF uploaded. Using document ID: ${docIdInput.value}`, 'bot');
     } catch (error) {
@@ -441,7 +509,6 @@ async function sendMessage() {
         const formData = new FormData();
         formData.append('query', text);
         formData.append('doc_id', docId);
-        formData.append('session_summary', getActiveSession()?.summary || 'No conversation yet.');
 
         const response = await fetch(`${API_BASE_URL}/chat`, {
             method: 'POST',
@@ -465,7 +532,7 @@ async function sendMessage() {
                 };
                 maybeShowFirstReviewPopup();
             }
-        const updatedSession = updateActiveSession((session) => {
+        updateActiveSession((session) => {
             session.docId = docId;
             if (!docId) {
                 session.docName = '';
@@ -474,7 +541,6 @@ async function sendMessage() {
             session.messages.push({ sender: 'user', text });
             session.messages.push({ sender: 'bot', text: directResponse });
             });
-            await saveSessionMemory(updatedSession);
             setStatus(docId ? `Connected to document: ${docId}` : 'Answered with web fallback.');
             return;
         }
@@ -500,7 +566,7 @@ async function sendMessage() {
         fullText += decoder.decode();
         const finalAnswer = fullText.trim() ? fullText : 'No response generated.';
         botMessage.textContent = finalAnswer;
-        const updatedSession = updateActiveSession((session) => {
+        updateActiveSession((session) => {
             session.docId = docId;
             if (!docId) {
                 session.docName = '';
@@ -509,7 +575,6 @@ async function sendMessage() {
             session.messages.push({ sender: 'user', text });
             session.messages.push({ sender: 'bot', text: finalAnswer });
         });
-        await saveSessionMemory(updatedSession);
         if (!hasShownFirstReviewPopup && !hasResolvedFirstReview) {
             latestReviewContext = {
                 query: text,

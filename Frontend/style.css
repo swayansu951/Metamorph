@@ -373,9 +373,14 @@ button:disabled {
     scrollbar-color: #403d00 #c8ad90;
 }
 
+.session-card-shell {
+    position: relative;
+}
+
 .session-card {
     width: 100%;
     padding: 14px;
+    padding-right: 78px;
     text-align: left;
     color: var(--gold-soft);
     background: #8f7364;
@@ -386,6 +391,22 @@ button:disabled {
 .session-card.active {
     background: #c8ad90;
     border-color: #403d00;
+}
+
+.session-delete {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 6px 8px;
+    color: #403d00;
+    background: #c8ad90;
+    border: 1px solid #403d00;
+    font-size: 11px;
+}
+
+.session-delete:hover:not(:disabled) {
+    color: #c8ad90;
+    background: #403d00;
 }
 
 .session-card-topline {
@@ -490,5 +511,9 @@ button:disabled {
 
     button {
         width: 100%;
+    }
+
+    .session-delete {
+        width: auto;
     }
 }

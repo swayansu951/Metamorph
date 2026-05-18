@@ -105,8 +105,6 @@ def direct_answer(state: AgentState) -> AgentState:
     prompt = f"""
 Answer the user normally and briefly.
 If they ask about a PDF but no document is selected, tell them to upload/select a PDF first.
-Use this conversation memory only for continuity, not as a factual source:
-{state.get("session_summary", "No conversation yet.")}
 
 User: {state["query"]}
 """
@@ -339,6 +337,22 @@ def route_query(state: AgentState) -> str:
     if any(trigger in query for trigger in web_triggers):
         return "WEB_SEARCH"
 
+    direct_triggers = {
+        "hi",
+        "hello",
+        "hey",
+        "thanks",
+        "thank you",
+        "ok",
+        "okay",
+    }
+    normalized_query = query.strip(" !?.")
+    if normalized_query in direct_triggers:
+        return "LLM_RESPONSE"
+
+    if doc_id:
+        return "RAG_SEARCH"
+
     prompt = f"""
     You are a routing classifier. Return only one label:
 
@@ -374,7 +388,6 @@ def finalize_answer(state:AgentState) -> AgentState:
 
     prompt = (
             f"from the user query : {state['query']}\n"
-            f"conversation memory for continuity only : {state.get('session_summary', 'No conversation yet.')}\n"
             f"retireve answer from the context : {state['current_window']} \n"
             f"please give a comprihensive well structured response for the user"
             f"Answer only using the context"

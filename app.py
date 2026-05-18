@@ -177,6 +177,17 @@ async def save_session_memory(memory: SessionMemoryPayload):
     }
 
 
+@app.delete("/session-memory/{session_id}")
+async def delete_session_memory(session_id: str):
+    memory_file = session_memory_path(session_id)
+    if memory_file.exists():
+        memory_file.unlink()
+    return {
+        "message": "Session memory deleted successfully",
+        "session_id": session_id,
+    }
+
+
 @app.post("/chat")
 
 async def chat(
