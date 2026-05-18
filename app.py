@@ -92,17 +92,47 @@ def session_memory_path(session_id: str) -> Path:
 def session_doc_path(session_id: str) -> Path:
     return SESSION_MEMORY_FOLDER / f"{sanitize_session_id(session_id)}.doc.txt"
 
+
+def latest_indexed_doc_id() -> str:
+    documents_path = PROJECT_ROOT / "rag_db" / "documents"
+    if not documents_path.exists():
+        return ""
+
+    indexed_docs = [
+        doc_path for doc_path in documents_path.iterdir()
+        if doc_path.is_dir()
+        and (doc_path / "metadata.pkl").exists()
+        and (doc_path / "chunk_index.faiss").exists()
+    ]
+    if not indexed_docs:
+        return ""
+
+    latest_doc = max(indexed_docs, key=lambda path: path.stat().st_mtime)
+    return latest_doc.name
+
+
+def asks_about_uploaded_document(query: str) -> bool:
+    normalized_query = query.lower()
+    document_words = ["pdf", "document", "doc", "uploaded", "provided", "from the file"]
+    return any(word in normalized_query for word in document_words)
+
 @app.get("/")
 async def serve_frontend():
     return FileResponse(FRONTEND_DIR / "index.html")
 
 @app.get("/style.css")
 async def serve_stylesheet():
-    return FileResponse(FRONTEND_DIR / "style.css")
+    return FileResponse(
+        FRONTEND_DIR / "style.css",
+        headers={"Cache-Control": "no-store"},
+    )
 
 @app.get("/script.js")
 async def serve_script():
-    return FileResponse(FRONTEND_DIR / "script.js")
+    return FileResponse(
+        FRONTEND_DIR / "script.js",
+        headers={"Cache-Control": "no-store"},
+    )
 
 @app.post("/upload")
 async def upload_pdf(
@@ -118,6 +148,10 @@ async def upload_pdf(
     doc_id = file_path.stem
 
     ingest_pdf(file_path, doc_id)
+
+    doc_folder = PROJECT_ROOT / "rag_db" / "documents" / doc_id
+    if not (doc_folder / "metadata.pkl").exists() or not (doc_folder / "chunk_index.faiss").exists():
+        raise HTTPException(status_code=500, detail="PDF upload succeeded, but indexing failed.")
 
     if session_id.strip():
         session_doc_path(session_id).write_text(doc_id, encoding="utf-8")
@@ -220,6 +254,8 @@ async def chat(
             doc_file = session_doc_path(session_id)
             if doc_file.exists():
                 resolved_doc_id = doc_file.read_text(encoding="utf-8").strip()
+        if not resolved_doc_id and asks_about_uploaded_document(query):
+            resolved_doc_id = latest_indexed_doc_id()
 
         answer = await async_final_answer(
             query,
