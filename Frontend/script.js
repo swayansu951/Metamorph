@@ -1,9 +1,6 @@
-const API_BASE_URL = window.location.protocol === 'file:'
-    ? 'http://127.0.0.1:8000'
-    : window.location.origin;
-const REQUEST_HEADERS = API_BASE_URL.includes('ngrok-free.dev')
-    ? { 'ngrok-skip-browser-warning': 'true' }
-    : {};
+const API_BASE_URL = "https://armed-component-cartridge.ngrok-free.dev";
+
+const REQUEST_HEADERS = { 'ngrok-skip-browser-warning': 'true' };
 
 const chatBox = document.getElementById('chat-box');
 const userInput = document.getElementById('user-input');
