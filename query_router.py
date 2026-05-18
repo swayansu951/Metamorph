@@ -44,14 +44,14 @@ llm_model = ChatOllama(model='llama3.1:8b-instruct-q5_K_S',
                         stream=True, 
                         num_gpu=0,
                         keep_alive="1m",
-                        num_thread=6,
+                        num_thread=10,
                         temperature=0.1,
                         )
 
 direct_llm_model = ChatOllama(model='llama3.1:8b-instruct-q5_K_S', 
                         stream=True, 
                         num_gpu=-1,
-                        keep_alive=2,
+                        keep_alive=3,
                         temperature=0.2,
                         )
 
