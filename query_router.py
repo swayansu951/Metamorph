@@ -56,18 +56,31 @@ direct_llm_model = ChatOllama(model='llama3.1:8b-instruct-q5_K_S',
                         )
 
 # urls for web crwaling
-URLS = [
-    "https://yahoo.com",
-    "https://sec.gov",
-    "https://cdc.gov",
-    "https://who.int",
-    "https://arxiv.org",
-    "https://nasa.gov",
-    "https://usgs.gov",
-    "https://worldbank.org",
-    "https://indiacode.nic.in",
-    "https://govinfo.gov"
-]
+URLS = {
+    "finance": [
+        "https://finance.yahoo.com",
+        "https://sec.gov",
+        "https://worldbank.org",
+    ],
+    "science": [
+        "https://arxiv.org",
+        "https://nasa.gov",
+        "https://usgs.gov",
+    ],
+    "news": [
+        "https://news.google.com",
+        "https://www.reuters.com",
+        "https://apnews.com",
+    ],
+    "health": [
+        "https://cdc.gov",
+        "https://who.int",
+    ],
+    "legal": [
+        "https://indiacode.nic.in",
+        "https://govinfo.gov",
+    ],
+}
 window = 4500
 slide_window = 2000
 
@@ -130,6 +143,41 @@ def prepare_rag_windows(state:AgentState) -> AgentState:
     "rest": window - slider_window
     }
 # To get a asyncio and safe web search result fit to the websearch tool writen(async function)
+def select_web_category(query: str) -> str:
+    """Select the most relevant URL category for web search."""
+
+    normalized_query = query.lower()
+    category_keywords = {
+        "finance": [
+            "stock", "market", "earnings", "revenue", "finance", "investment",
+            "sec", "bank", "gdp", "inflation", "company", "shares",
+        ],
+        "science": [
+            "research", "paper", "study", "science", "space", "nasa",
+            "arxiv", "earthquake", "climate", "physics", "ai",
+        ],
+        "news": [
+            "news", "latest", "current", "today", "recent", "breaking",
+            "update", "updates", "anthropic", "openai", "google", "microsoft",
+        ],
+        "health": [
+            "health", "disease", "medical", "medicine", "virus", "covid",
+            "cdc", "who", "symptoms", "vaccine",
+        ],
+        "legal": [
+            "law", "legal", "act", "regulation", "policy", "court",
+            "government", "bill", "compliance",
+        ],
+    }
+
+    scores = {
+        category: sum(keyword in normalized_query for keyword in keywords)
+        for category, keywords in category_keywords.items()
+    }
+    best_category = max(scores, key=scores.get)
+    return best_category if scores[best_category] > 0 else "news"
+
+
 def _stringify_context(context) -> str:
     """checks and handle mulultiple query input type without throughing error for the web_query"""
 
@@ -145,10 +193,13 @@ def _stringify_context(context) -> str:
 async def _run_web_pipeline(query: str) -> str:
     """run asyncio web search pipeline"""
 
+    selected_category = select_web_category(query)
+    selected_urls = URLS[selected_category]
+
     if hasattr(run_pipeline, "ainvoke"):
-        context = await run_pipeline.ainvoke({"query": query, "url": URLS})
+        context = await run_pipeline.ainvoke({"query": query, "url": selected_urls})
     else:
-        context = await run_pipeline(query, url=URLS)
+        context = await run_pipeline(query, url=selected_urls)
     return _stringify_context(context)
 
 async def add_to_web(state:AgentState) -> AgentState:
@@ -270,6 +321,24 @@ def route_query(state: AgentState) -> str:
     """Route which path to take according to the user's query, rag or web or direct llm response"""
 
     doc_id = state.get("doc_id")
+    query = state["query"].lower()
+    web_triggers = [
+        "current",
+        "latest",
+        "recent",
+        "today",
+        "news",
+        "breaking",
+        "live",
+        "now",
+        "this week",
+        "this month",
+        "updates",
+        "update",
+    ]
+
+    if any(trigger in query for trigger in web_triggers):
+        return "WEB_SEARCH"
 
     prompt = f"""
     You are a routing classifier. Return only one label:
