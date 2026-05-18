@@ -43,7 +43,7 @@ messages = [{'role' : 'system' , 'content' : system_prompt}]
 llm_model = ChatOllama(model='llama3.1:8b-instruct-q5_K_S', 
                         stream=True, 
                         num_gpu=0,
-                        keep_alive="1m",
+                        keep_alive=15,
                         num_thread=10,
                         temperature=0.1,
                         )
