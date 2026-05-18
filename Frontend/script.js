@@ -84,6 +84,51 @@ function summarizeSession(session) {
     return `${userPart} ${botPart}`.trim().slice(0, 170);
 }
 
+function sessionStatusMessage(session) {
+    return `Session memory: ${session.summary || 'No conversation yet.'}`;
+}
+
+async function loadSessionMemory(session) {
+    if (!session?.id) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/session-memory/${encodeURIComponent(session.id)}`, {
+            method: 'GET',
+            headers: createRequestHeaders()
+        });
+
+        if (!response.ok) {
+            return;
+        }
+
+        const data = await response.json();
+        session.summary = data.summary || session.summary || 'No conversation yet.';
+    } catch (error) {
+        // Keep local session memory usable if the backend is temporarily unavailable.
+    }
+}
+
+async function saveSessionMemory(session) {
+    if (!session?.id) {
+        return;
+    }
+
+    try {
+        await fetch(`${API_BASE_URL}/session-memory`, {
+            method: 'POST',
+            headers: createRequestHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({
+                session_id: session.id,
+                summary: session.summary || 'No conversation yet.'
+            })
+        });
+    } catch (error) {
+        // Local storage still keeps the session available if disk memory save fails.
+    }
+}
+
 function formatSessionTime(value) {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) {
@@ -159,7 +204,7 @@ function restoreChat(session) {
     session.messages.forEach((message) => appendMessage(message.text, message.sender));
 }
 
-function selectSession(sessionId) {
+async function selectSession(sessionId) {
     const session = sessions.find((item) => item.id === sessionId);
     if (!session) {
         return;
@@ -167,7 +212,9 @@ function selectSession(sessionId) {
     activeSessionId = session.id;
     docIdInput.value = session.docId || '';
     restoreChat(session);
-    setStatus(session.docId ? `Continuing with document: ${session.docId}` : 'Continuing a web-backed session.');
+    setStatus(sessionStatusMessage(session));
+    await loadSessionMemory(session);
+    setStatus(sessionStatusMessage(session));
     saveSessions();
     renderSessions();
 }
@@ -188,13 +235,14 @@ function startNewSession() {
 function updateActiveSession(updater) {
     const session = getActiveSession();
     if (!session) {
-        return;
+        return null;
     }
     updater(session);
     session.summary = summarizeSession(session);
     session.updatedAt = new Date().toISOString();
     saveSessions();
     renderSessions();
+    return session;
 }
 
 function loadSessions() {
@@ -352,7 +400,7 @@ async function uploadPdf() {
 
         const data = await response.json();
         docIdInput.value = data.doc_id || '';
-        updateActiveSession((session) => {
+        const updatedSession = updateActiveSession((session) => {
             session.docId = docIdInput.value;
             session.docName = file.name;
             session.title = file.name.replace(/\.pdf$/i, '') || 'Document chat';
@@ -361,6 +409,7 @@ async function uploadPdf() {
                 text: `PDF uploaded. Using document ID: ${docIdInput.value}`
             });
         });
+        await saveSessionMemory(updatedSession);
         setStatus(`PDF indexed successfully. Current document: ${docIdInput.value}`);
         appendMessage(`PDF uploaded. Using document ID: ${docIdInput.value}`, 'bot');
     } catch (error) {
@@ -392,6 +441,7 @@ async function sendMessage() {
         const formData = new FormData();
         formData.append('query', text);
         formData.append('doc_id', docId);
+        formData.append('session_summary', getActiveSession()?.summary || 'No conversation yet.');
 
         const response = await fetch(`${API_BASE_URL}/chat`, {
             method: 'POST',
@@ -415,7 +465,7 @@ async function sendMessage() {
                 };
                 maybeShowFirstReviewPopup();
             }
-        updateActiveSession((session) => {
+        const updatedSession = updateActiveSession((session) => {
             session.docId = docId;
             if (!docId) {
                 session.docName = '';
@@ -424,6 +474,7 @@ async function sendMessage() {
             session.messages.push({ sender: 'user', text });
             session.messages.push({ sender: 'bot', text: directResponse });
             });
+            await saveSessionMemory(updatedSession);
             setStatus(docId ? `Connected to document: ${docId}` : 'Answered with web fallback.');
             return;
         }
@@ -449,7 +500,7 @@ async function sendMessage() {
         fullText += decoder.decode();
         const finalAnswer = fullText.trim() ? fullText : 'No response generated.';
         botMessage.textContent = finalAnswer;
-        updateActiveSession((session) => {
+        const updatedSession = updateActiveSession((session) => {
             session.docId = docId;
             if (!docId) {
                 session.docName = '';
@@ -458,6 +509,7 @@ async function sendMessage() {
             session.messages.push({ sender: 'user', text });
             session.messages.push({ sender: 'bot', text: finalAnswer });
         });
+        await saveSessionMemory(updatedSession);
         if (!hasShownFirstReviewPopup && !hasResolvedFirstReview) {
             latestReviewContext = {
                 query: text,

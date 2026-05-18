@@ -28,6 +28,7 @@ class AgentState(TypedDict):
     use_web : bool
     source : str
     rest : int
+    session_summary : str
 
 # Simple RAG response generator
 generator = GENERATE()
@@ -85,6 +86,8 @@ def direct_answer(state: AgentState) -> AgentState:
     prompt = f"""
 Answer the user normally and briefly.
 If they ask about a PDF but no document is selected, tell them to upload/select a PDF first.
+Use this conversation memory only for continuity, not as a factual source:
+{state.get("session_summary", "No conversation yet.")}
 
 User: {state["query"]}
 """
@@ -296,6 +299,7 @@ def finalize_answer(state:AgentState) -> AgentState:
 
     prompt = (
             f"from the user query : {state['query']}\n"
+            f"conversation memory for continuity only : {state.get('session_summary', 'No conversation yet.')}\n"
             f"retireve answer from the context : {state['current_window']} \n"
             f"please give a comprihensive well structured response for the user"
             f"Answer only using the context"
@@ -350,7 +354,7 @@ agentGraph.add_edge("final_llm_answer", END)
 
 app = agentGraph.compile()
 
-def _initial_state(query: str, doc_id: str | None = None) -> AgentState:
+def _initial_state(query: str, doc_id: str | None = None, session_summary: str | None = None) -> AgentState:
     return {
         "messages": [],
         "query": query,
@@ -368,13 +372,18 @@ def _initial_state(query: str, doc_id: str | None = None) -> AgentState:
         "use_web": False,
         "source": "",
         "rest": 0,
+        "session_summary": session_summary or "No conversation yet.",
     }
 
-async def async_final_answer(query: str, doc_id: str | None = None) -> str:
+async def async_final_answer(
+    query: str,
+    doc_id: str | None = None,
+    session_summary: str | None = None
+) -> str:
     """Async graph entrypoint for FastAPI or other async callers."""
-    result = await app.ainvoke(_initial_state(query, doc_id))
+    result = await app.ainvoke(_initial_state(query, doc_id, session_summary))
     return result.get("final_answer", "")
 
-def final_answer(query:str, doc_id:str |None=None):
+def final_answer(query:str, doc_id:str |None=None, session_summary: str | None = None):
     """Finally gives the final response from the big llm generated"""
-    return asyncio.run(async_final_answer(query, doc_id))
+    return asyncio.run(async_final_answer(query, doc_id, session_summary))

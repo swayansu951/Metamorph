@@ -15,11 +15,13 @@
 }
 
 body {
+    height: 100vh;
     min-height: 100vh;
     margin: 0;
     background: #8f7364;
     color: var(--ink);
     font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+    overflow: hidden;
 }
 
 button,
@@ -29,6 +31,7 @@ textarea {
 }
 
 .app-shell {
+    height: 100vh;
     min-height: 100vh;
     padding: 18px;
     display: flex;
@@ -75,6 +78,7 @@ textarea {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 350px;
     gap: 16px;
+    overflow: hidden;
 }
 
 .chat-container {
@@ -143,7 +147,22 @@ textarea {
 
 .chat-content {
     scrollbar-width: thin;
-    scrollbar-color: var(--panel) rgba(164, 133, 115, 0.7);
+    scrollbar-color: #403d00 #c8ad90;
+}
+
+.chat-content::-webkit-scrollbar,
+.session-list::-webkit-scrollbar {
+    width: 10px;
+}
+
+.chat-content::-webkit-scrollbar-track,
+.session-list::-webkit-scrollbar-track {
+    background: #c8ad90;
+}
+
+.chat-content::-webkit-scrollbar-thumb,
+.session-list::-webkit-scrollbar-thumb {
+    background: #403d00;
 }
 
 .review-popup {
@@ -343,12 +362,15 @@ button:disabled {
 }
 
 .session-list {
+    flex: 1;
     min-height: 0;
     overflow-y: auto;
     padding: 10px;
     display: flex;
     flex-direction: column;
     gap: 10px;
+    scrollbar-width: thin;
+    scrollbar-color: #403d00 #c8ad90;
 }
 
 .session-card {
@@ -424,6 +446,7 @@ button:disabled {
 @media (max-width: 900px) {
     .workspace {
         grid-template-columns: 1fr;
+        grid-template-rows: minmax(0, 1fr) minmax(220px, 280px);
     }
 
     .session-panel {
@@ -446,7 +469,7 @@ button:disabled {
     }
 
     .chat-container {
-        min-height: 64vh;
+        min-height: 0;
     }
 
     .upload-row,

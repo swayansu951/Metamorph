@@ -47,8 +47,10 @@ rag = GENERATE()
 
 UPLOAD_FOLDER = PROJECT_ROOT / "uploads"
 REVIEW_FOLDER = PROJECT_ROOT / "reviews"
+SESSION_MEMORY_FOLDER = PROJECT_ROOT / "memory"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(REVIEW_FOLDER, exist_ok=True)
+os.makedirs(SESSION_MEMORY_FOLDER, exist_ok=True)
 
 REVIEW_OPTIONS = {
     "accurate answer",
@@ -68,9 +70,23 @@ class ReviewPayload(BaseModel):
     review_action: str = "submitted"
 
 
+class SessionMemoryPayload(BaseModel):
+    session_id: str
+    summary: str = "No conversation yet."
+
+
 def sanitize_reviewer_name(reviewer_name: str) -> str:
     sanitized_name = re.sub(r"[^a-zA-Z0-9_-]+", "_", reviewer_name.strip().lower())
     return sanitized_name.strip("_") or "reviewer"
+
+
+def sanitize_session_id(session_id: str) -> str:
+    sanitized_id = re.sub(r"[^a-zA-Z0-9_-]+", "_", session_id.strip())
+    return sanitized_id.strip("_") or "session"
+
+
+def session_memory_path(session_id: str) -> Path:
+    return SESSION_MEMORY_FOLDER / f"{sanitize_session_id(session_id)}.txt"
 
 @app.get("/")
 async def serve_frontend():
@@ -137,14 +153,43 @@ async def save_review(review: ReviewPayload):
         "reviewer_name": reviewer_name,
     }
 
+
+@app.get("/session-memory/{session_id}")
+async def get_session_memory(session_id: str):
+    memory_file = session_memory_path(session_id)
+    summary = "No conversation yet."
+    if memory_file.exists():
+        summary = memory_file.read_text(encoding="utf-8").strip() or summary
+    return {
+        "session_id": session_id,
+        "summary": summary,
+    }
+
+
+@app.post("/session-memory")
+async def save_session_memory(memory: SessionMemoryPayload):
+    memory_file = session_memory_path(memory.session_id)
+    summary = memory.summary.strip() or "No conversation yet."
+    memory_file.write_text(summary[:1000], encoding="utf-8")
+    return {
+        "message": "Session memory saved successfully",
+        "session_id": memory.session_id,
+    }
+
+
 @app.post("/chat")
 
 async def chat(
     query : str = Form(...),
-    doc_id: str = Form("")
+    doc_id: str = Form(""),
+    session_summary: str = Form("")
 ):
     async def stream_response():
-        answer = await async_final_answer(query, doc_id.strip() or None)
+        answer = await async_final_answer(
+            query,
+            doc_id.strip() or None,
+            session_summary.strip() or None
+        )
         yield answer
     
     return StreamingResponse(
