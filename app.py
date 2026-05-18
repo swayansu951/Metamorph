@@ -88,6 +88,10 @@ def sanitize_session_id(session_id: str) -> str:
 def session_memory_path(session_id: str) -> Path:
     return SESSION_MEMORY_FOLDER / f"{sanitize_session_id(session_id)}.txt"
 
+
+def session_doc_path(session_id: str) -> Path:
+    return SESSION_MEMORY_FOLDER / f"{sanitize_session_id(session_id)}.doc.txt"
+
 @app.get("/")
 async def serve_frontend():
     return FileResponse(FRONTEND_DIR / "index.html")
@@ -101,7 +105,10 @@ async def serve_script():
     return FileResponse(FRONTEND_DIR / "script.js")
 
 @app.post("/upload")
-async def upload_pdf(file:UploadFile = File(...)):
+async def upload_pdf(
+    file:UploadFile = File(...),
+    session_id: str = Form("")
+):
     safe_filename = Path(file.filename).name
     file_path = UPLOAD_FOLDER / safe_filename
 
@@ -111,6 +118,9 @@ async def upload_pdf(file:UploadFile = File(...)):
     doc_id = file_path.stem
 
     ingest_pdf(file_path, doc_id)
+
+    if session_id.strip():
+        session_doc_path(session_id).write_text(doc_id, encoding="utf-8")
 
     return{
         "message" : "PDF indexed successfully",
@@ -157,12 +167,17 @@ async def save_review(review: ReviewPayload):
 @app.get("/session-memory/{session_id}")
 async def get_session_memory(session_id: str):
     memory_file = session_memory_path(session_id)
+    doc_file = session_doc_path(session_id)
     summary = "No conversation yet."
+    doc_id = ""
     if memory_file.exists():
         summary = memory_file.read_text(encoding="utf-8").strip() or summary
+    if doc_file.exists():
+        doc_id = doc_file.read_text(encoding="utf-8").strip()
     return {
         "session_id": session_id,
         "summary": summary,
+        "doc_id": doc_id,
     }
 
 
@@ -180,8 +195,11 @@ async def save_session_memory(memory: SessionMemoryPayload):
 @app.delete("/session-memory/{session_id}")
 async def delete_session_memory(session_id: str):
     memory_file = session_memory_path(session_id)
+    doc_file = session_doc_path(session_id)
     if memory_file.exists():
         memory_file.unlink()
+    if doc_file.exists():
+        doc_file.unlink()
     return {
         "message": "Session memory deleted successfully",
         "session_id": session_id,
@@ -193,12 +211,19 @@ async def delete_session_memory(session_id: str):
 async def chat(
     query : str = Form(...),
     doc_id: str = Form(""),
+    session_id: str = Form(""),
     session_summary: str = Form("")
 ):
     async def stream_response():
+        resolved_doc_id = doc_id.strip()
+        if not resolved_doc_id and session_id.strip():
+            doc_file = session_doc_path(session_id)
+            if doc_file.exists():
+                resolved_doc_id = doc_file.read_text(encoding="utf-8").strip()
+
         answer = await async_final_answer(
             query,
-            doc_id.strip() or None,
+            resolved_doc_id or None,
             session_summary.strip() or None
         )
         yield answer

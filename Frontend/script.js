@@ -105,6 +105,12 @@ async function loadSessionMemory(session) {
 
         const data = await response.json();
         session.summary = data.summary || session.summary || 'No conversation yet.';
+        if (data.doc_id) {
+            session.docId = data.doc_id;
+            if (session.id === activeSessionId) {
+                docIdInput.value = data.doc_id;
+            }
+        }
     } catch (error) {
         // Keep local session memory usable if the backend is temporarily unavailable.
     }
@@ -455,6 +461,7 @@ async function uploadPdf() {
     try {
         const formData = new FormData();
         formData.append('file', file);
+        formData.append('session_id', activeSessionId);
 
         const response = await fetch(`${API_BASE_URL}/upload`, {
             method: 'POST',
@@ -490,10 +497,15 @@ async function uploadPdf() {
 
 async function sendMessage() {
     const text = userInput.value.trim();
-    const docId = docIdInput.value.trim();
+    const activeSession = getActiveSession();
+    const docId = (docIdInput.value.trim() || activeSession?.docId || '').trim();
 
     if (!text || isSending) {
         return;
+    }
+
+    if (docId) {
+        docIdInput.value = docId;
     }
 
     appendMessage(text, 'user');
@@ -509,6 +521,7 @@ async function sendMessage() {
         const formData = new FormData();
         formData.append('query', text);
         formData.append('doc_id', docId);
+        formData.append('session_id', activeSessionId);
 
         const response = await fetch(`${API_BASE_URL}/chat`, {
             method: 'POST',
