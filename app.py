@@ -69,6 +69,14 @@ def sanitize_reviewer_name(reviewer_name: str) -> str:
 async def serve_frontend():
     return FileResponse(FRONTEND_DIR / "index.html")
 
+@app.get("/style.css")
+async def serve_stylesheet():
+    return FileResponse(FRONTEND_DIR / "style.css")
+
+@app.get("/script.js")
+async def serve_script():
+    return FileResponse(FRONTEND_DIR / "script.js")
+
 @app.post("/upload")
 async def upload_pdf(file:UploadFile = File(...)):
     safe_filename = Path(file.filename).name

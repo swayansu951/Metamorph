@@ -9,6 +9,7 @@ import ollama
 import asyncio
 from langchain_core.tools import tool
 from llama_cpp import llama
+from crawl4ai.async_configs import CacheMode
 from duckduckgo_search import duckduckgo_search
 from crawl4ai.deep_crawling.scorers import KeywordRelevanceScorer
 from crawl4ai.markdown_generation_strategy import DefaultMarkdownGenerator
@@ -47,7 +48,7 @@ async def web_scrape(url:list) -> list:
         markdown_generator=DefaultMarkdownGenerator(
             content_filter=True,
             options={'strip_link' : True}),
-            bypass_cache=True
+            cache_mode=CacheMode.BYPASS
             )
     scraped_pages = []
     async with AsyncWebCrawler(config= browser_config) as crawler:
