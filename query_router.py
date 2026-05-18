@@ -68,7 +68,6 @@ URLS = {
         "https://usgs.gov",
     ],
     "news": [
-        "https://news.google.com",
         "https://www.reuters.com",
         "https://apnews.com",
     ],
