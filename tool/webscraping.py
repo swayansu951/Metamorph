@@ -143,22 +143,7 @@ async def run_pipeline(query: str, url:dict): # set pre defined urls to use only
     # ::: STEP2 :::
     refined_page = reranker(query=query, crawled_data=raw_data)
 
-    # ::: STEP3 :::
-    # if use CLI and run separately then generate answer by calling this function otherwise only the final answer connect to the main llm    
-    final_output = generate_response(query=query, context=refined_page)   
-
-    # #if test only this then uncomment this
-    # ::: FINAL OUTPUT :::
-    combined_context = []
-    
-    async with AsyncWebCrawler() as crawler:
-        for url in url  :
-            # arun() must be awaited inside this async function
-            result = await crawler.arun(url=url)
-            if result.success:
-                combined_context.append(f"Source ({url}):\n{result.markdown}")
-                
-    return "\n\n".join(combined_context)
+    return "\n\n".join(refined_page)[:6000]
 
 # hard code the web pages to scrap 
 # user query
