@@ -1,4 +1,4 @@
-def build_context(chunks, max_chars= 4000):
+def build_context(chunks, max_chars= 4196):
     context= ""
 
     for chunk in chunks:
