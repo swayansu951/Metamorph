@@ -48,6 +48,13 @@ llm_model = ChatOllama(model='llama3.1:8b-instruct-q5_K_S',
                         temperature=0.1,
                         )
 
+direct_llm_model = ChatOllama(model='llama3.1:8b-instruct-q5_K_S', 
+                        stream=True, 
+                        num_gpu=-1,
+                        keep_alive=2,
+                        temperature=0.2,
+                        )
+
 # urls for web crwaling
 URLS = [
     "https://yahoo.com",
@@ -91,7 +98,7 @@ Use this conversation memory only for continuity, not as a factual source:
 
 User: {state["query"]}
 """
-    response = llm_model.invoke([HumanMessage(content=prompt)]).content
+    response = direct_llm_model.invoke([HumanMessage(content=prompt)]).content
     return {"final_answer": response}
 
 def prepare_rag_windows(state:AgentState) -> AgentState:
