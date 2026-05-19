@@ -56,10 +56,16 @@ async def web_scrape(url:list) -> list:
     async with AsyncWebCrawler(config= browser_config) as crawler:
         results = await crawler.arun_many(config=run_config, 
                                           urls=url)
-        for result in results:
-            if result.success:
-                scraped_pages.append({"url" : getattr(result, "url", ""), "content" : result.markdown.fit_markdown}
-                                     )
+        if hasattr(results, "__aiter__"):
+            async for result in results:
+                if result.success:
+                    scraped_pages.append({"url" : getattr(result, "url", ""), "content" : result.markdown.fit_markdown}
+                                         )
+        else:
+            for result in results:
+                if result.success:
+                    scraped_pages.append({"url" : getattr(result, "url", ""), "content" : result.markdown.fit_markdown}
+                                         )
     
     return scraped_pages
 
