@@ -1,4 +1,5 @@
 import ollama
+from pathlib import Path
 import asyncio
 from simple_rag.main import GENERATE
 from typing import TypedDict, Optional
@@ -30,6 +31,11 @@ class AgentState(TypedDict):
     rest : int
     session_summary : str
 
+# doc path
+path = Path(__file__).resolve().parent
+doc_dir = path/"rag_db"
+docs = doc_dir/"documents"
+
 # Simple RAG response generator
 generator = GENERATE()
 
@@ -44,11 +50,11 @@ llm_model = ChatOllama(model='llama3.1:8b-instruct-q5_K_S',
                         stream=True, 
                         num_gpu=0,
                         keep_alive=15,
-                        num_thread=10,
+                        num_thread=11,
                         temperature=0.1,
                         )
 
-direct_llm_model = ChatOllama(model='llama3.1:8b-instruct-q5_K_S', 
+direct_llm_model = ChatOllama(model='llama3.2:3b', 
                         stream=True, 
                         num_gpu=-1,
                         keep_alive=3,
@@ -58,9 +64,6 @@ direct_llm_model = ChatOllama(model='llama3.1:8b-instruct-q5_K_S',
 # urls for web crwaling
 URLS = {
     "finance": [
-        "https://finance.yahoo.com",
-        "https://sec.gov",
-        "https://worldbank.org",
     ],
     "science": [
         "https://arxiv.org",
@@ -80,8 +83,6 @@ URLS = {
         "https://govinfo.gov",
     ],
 }
-window = 4500
-slide_window = 2000
 
 # preserve the context window and accuracy increase LangGraph
 class AgentState2(TypedDict):
@@ -118,7 +119,7 @@ def prepare_rag_windows(state:AgentState) -> AgentState:
         3. set the cursor original pointer at 0.
         4. Set the current window be the slider window which feed the context to the LLM.
     """
-    context = generator.retrieve_context(query=state["query"], doc_id=state["doc_id"])
+    context = generator.retrieve_context(query=state["query"], doc_id=docs/state["doc_id"])
     window = state.get("window", 4050)
     slider_window = state.get("slide_window", int(window * 0.15))
 
@@ -204,7 +205,7 @@ async def add_to_web(state:AgentState) -> AgentState:
     context = await _run_web_pipeline(state["query"])
     
     combined_context = f"{state.get('context', '')}\n\n{context}".strip()
-    window = state.get("window", 6000)
+    window = state.get("window", 4150)
     slider_window = state.get("slide_window", int(window * 0.15))
     spliter = RecursiveCharacterTextSplitter(
                                     chunk_size = window,
@@ -229,7 +230,7 @@ async def web_search(state:AgentState) -> AgentState:
     
     context = await _run_web_pipeline(state["query"])
     
-    window = state.get("window", 4000)
+    window = state.get("window", 4150)
     slider_window = state.get("slide_window", int(window * 0.15))
 
     spliter = RecursiveCharacterTextSplitter(
@@ -345,6 +346,7 @@ def route_query(state: AgentState) -> str:
         "thank you",
         "ok",
         "okay",
+        "bye",
     }
     normalized_query = query.strip(" !?.")
     if normalized_query in direct_triggers:
@@ -354,10 +356,10 @@ def route_query(state: AgentState) -> str:
         return "RAG_SEARCH"
 
     prompt = f"""
-    You are a routing classifier. Return only one label:
+    You are a routing classifier. Return only one label: DIRECT or RAG_SEARCH or WEB_SEARCH after checking :
 
     DIRECT - greeting, random chat, general message, or no retrieval needed
-    RAG_SEARCH - user is asking about "from the doc" or "from the provided book",  the uploaded document and doc_id exists
+    RAG_SEARCH - user is asking about "from the doc" or "from the provided file", if the uploaded document and doc_id exists
     WEB_SEARCH - user needs latest/current/external web information
 
     doc_id: {doc_id or "none"}
@@ -449,8 +451,8 @@ def _initial_state(query: str, doc_id: str | None = None, session_summary: str |
         "doc_id": doc_id,
         "chunk_ids": [],
         "cursor": 0,
-        "window": 4050,
-        "slide_window": int(4050 * 0.15),
+        "window": 4150,
+        "slide_window": int(4150 * 0.15),
         "context": "",
         "current_window": "",
         "all_window": [],

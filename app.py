@@ -40,7 +40,7 @@ app.add_middleware(
     allow_origins = ["*"],
     allow_methods=["*"],
     allow_headers=["*"],
-    #in production we have to replace "*" with specific frontend url
+    # In production we have to replace "*" with specific frontend url
 )
 
 rag = GENERATE()
@@ -241,7 +241,6 @@ async def delete_session_memory(session_id: str):
 
 
 @app.post("/chat")
-
 async def chat(
     query : str = Form(...),
     doc_id: str = Form(""),

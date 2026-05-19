@@ -7,13 +7,14 @@ import json
 import torch
 import ollama
 import asyncio
-from langchain_core.tools import tool
 from llama_cpp import llama
+from pydantic import BaseModel
+from langchain_core.tools import tool
 from crawl4ai.async_configs import CacheMode
 from duckduckgo_search import duckduckgo_search
 from crawl4ai.deep_crawling.scorers import KeywordRelevanceScorer
 from crawl4ai.markdown_generation_strategy import DefaultMarkdownGenerator
-from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, BrowserConfig, CacheMode
+from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, BrowserConfig, CacheMode, LLMExtractionStrategy, LLMConfig
 from crawl4ai.deep_crawling.filters import URLPatternFilter, DomainFilter, ContentRelevanceFilter
 
 
@@ -40,7 +41,7 @@ def get_reranker_model():
 async def web_scrape(url:list) -> list:
     """scrap web pages using a headless browser to retireve web content"""
 
-    browser_config = BrowserConfig(headless=True, 
+    browser_config = BrowserConfig(headless=False,  # keep it false  to visually watch what the crawler is actually seeing when it navigates to your target URLs.
                                    extra_args=["--disable-blink-features=AutomationControlled"]
                                    )
     
@@ -48,7 +49,8 @@ async def web_scrape(url:list) -> list:
         markdown_generator=DefaultMarkdownGenerator(
             content_filter=True,
             options={'strip_link' : True}),
-            cache_mode=CacheMode.BYPASS
+            cache_mode=CacheMode.BYPASS,
+            stream=True
             )
     scraped_pages = []
     async with AsyncWebCrawler(config= browser_config) as crawler:
@@ -113,7 +115,7 @@ def generate_response(query:str, context:list):
                                     stream=True, 
                                     think="medium", 
                                     options={"temperature" :0.1,
-                                            "num_ctx" : 4000,
+                                            "num_ctx" : 4150,
                                             "num_predict" : 512,
                                             'num_gpu' : -1,
                                             },
