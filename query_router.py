@@ -1,5 +1,4 @@
 import ollama
-from pathlib import Path
 import asyncio
 from simple_rag.main import GENERATE
 from typing import TypedDict, Optional
@@ -30,11 +29,6 @@ class AgentState(TypedDict):
     source : str
     rest : int
     session_summary : str
-
-# doc path
-path = Path(__file__).resolve().parent
-doc_dir = path/"rag_db"
-docs = doc_dir/"documents"
 
 # Simple RAG response generator
 generator = GENERATE()
@@ -119,7 +113,7 @@ def prepare_rag_windows(state:AgentState) -> AgentState:
         3. set the cursor original pointer at 0.
         4. Set the current window be the slider window which feed the context to the LLM.
     """
-    context = generator.retrieve_context(query=state["query"], doc_id=docs/state["doc_id"])
+    context = generator.retrieve_context(query=state["query"], doc_id=state["doc_id"])
     window = state.get("window", 4050)
     slider_window = state.get("slide_window", int(window * 0.15))
 
