@@ -148,10 +148,18 @@ async def run_pipeline(query: str, url:dict): # set pre defined urls to use only
     # ::: STEP1 ::: 
     raw_data = await web_scrape(url=url)
 
-    # ::: STEP2 :::
-    refined_page = reranker(query=query, crawled_data=raw_data)
+    combined_text = []
 
-    return "\n\n".join(refined_page)[:6000]
+    for page in raw_data:
+        content = page.get("content","")
+        source_url = page.get("url","")
+
+        if content:
+            combined_text.append(
+                f"source : {source_url}\n {content[:4150]}"
+            )
+    
+    return "\n\n".join()[combined_text:6000]
 
 # hard code the web pages to scrap 
 # user query
