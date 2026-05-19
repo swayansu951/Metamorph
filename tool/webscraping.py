@@ -159,7 +159,7 @@ async def run_pipeline(query: str, url:dict): # set pre defined urls to use only
                 f"source : {source_url}\n {content[:4150]}"
             )
     
-    return "\n\n".join()[combined_text:6000]
+    return "\n\n".join(combined_text)[:6000]
 
 # hard code the web pages to scrap 
 # user query
