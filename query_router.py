@@ -42,9 +42,8 @@ messages = [{'role' : 'system' , 'content' : system_prompt}]
 # Single unit controling model..
 llm_model = ChatOllama(model='llama3.1:8b-instruct-q5_K_S', 
                         stream=True, 
-                        num_gpu=0,
+                        num_gpu=-1,
                         keep_alive=15,
-                        num_thread=11,
                         temperature=0.1,
                         )
 
@@ -166,6 +165,10 @@ def select_web_category(query: str) -> str:
         category: sum(keyword in normalized_query for keyword in keywords)
         for category, keywords in category_keywords.items()
     }
+    for category in ("health", "finance", "legal", "science"):
+        if scores[category] > 0:
+            return category
+
     best_category = max(scores, key=scores.get)
     return best_category if scores[best_category] > 0 else "news"
 
