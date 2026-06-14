@@ -2,11 +2,11 @@ from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np 
 
 def semantic_chunker(text, embedding, soft_limit=350, hard_limit=550, threshold =0.75):
-    """ split text intelligently into meaningful, size-controlled segments that preserve semantic relationships, 
-        making embeddings and downstream tasks (like search, summarization, or prediction) much more effective.
+    """ split text intelligently into meaningful, size-controlled segments that preserve semantic relationships, \n
+        making embeddings and downstream tasks (like search, summarization, or prediction) much more effective.\n
         soft_limit : preferred size, tries to split earlier if the similarity drops
         hard_limit : absolute cutoff to avoid oversized chunks
-        threshold : To make sure the sentences groped are sematically related, if the similarity is low a new chunk starts 
+        threshold : To make sure the sentences groped are sematically related, if the similarity is low a new chunk starts \n
     """
     chunks = []
     current_chunk =[]

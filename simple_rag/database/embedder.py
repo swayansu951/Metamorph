@@ -1,3 +1,7 @@
+"""call embed_model to use LazySentenceTransformer\n
+    functions:\n
+        encode\n
+        get_sentence_embedding_dimension"""
 class LazySentenceTransformer:
     """Load the embedding model only when upload/search actually needs it."""
 

@@ -7,6 +7,7 @@ from tool.webscraping import run_pipeline
 from langgraph.graph.message import add_messages
 from langgraph.graph import StateGraph,END,START
 from typing import TypedDict, Annotated , Sequence
+from tool.duckduckgo import safe_search, news_search, search_media
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.messages import BaseMessage, SystemMessage, HumanMessage
 
@@ -57,25 +58,45 @@ direct_llm_model = ChatOllama(model='llama3.2:3b',
 # urls for web crwaling
 URLS = {
     "finance": [
+        "https://cnbc.com",
+        "https://marketwatch.com",
+    ],
+    "news" : [
+        "https://apnews.com",
+        "https://bbc.com",
+        "https://cnn.com",
+    ],
+    "programming" : [
+        "https://dev.to",
+        "https://reddit.com",
+        "https://stackoverflow.com",
+        "https://github.com",
     ],
     "science": [
         "https://arxiv.org",
         "https://nasa.gov",
         "https://usgs.gov",
     ],
-    "news": [
-        "https://www.reuters.com",
-        "https://apnews.com",
-    ],
     "health": [
         "https://cdc.gov",
         "https://who.int",
+        "https://medscape.com",
     ],
     "legal": [
         "https://indiacode.nic.in",
         "https://govinfo.gov",
     ],
 }
+
+def SEARCH(query : str) -> str:
+    """input : query
+       output : { 
+                    "query" : "user's query",
+                    "domains" : "choosed domain in a from of tuple"
+    """
+    search = safe_search(query) # trusted sites are pre-defined in the main file if want to change then chage from their.
+    
+    return search
 
 # preserve the context window and accuracy increase LangGraph
 class AgentState2(TypedDict):
@@ -159,13 +180,17 @@ def select_web_category(query: str) -> str:
             "law", "legal", "act", "regulation", "policy", "court",
             "government", "bill", "compliance",
         ],
+        "programming":[
+            "python language", "java", "css", "html", "js", "javascript", "coding",
+            "C++","c++","C language", "c language", "code", 
+        ]
     }
 
     scores = {
         category: sum(keyword in normalized_query for keyword in keywords)
         for category, keywords in category_keywords.items()
     }
-    for category in ("health", "finance", "legal", "science"):
+    for category in ("health", "finance", "legal", "science","news","programming"):
         if scores[category] > 0:
             return category
 
