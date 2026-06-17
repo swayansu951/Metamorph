@@ -345,28 +345,6 @@ def decide_next_step(state:AgentState) -> AgentState:
     #     return "RAG_SEARCH"
     
     # else: state["use_web"] = True ;  return "WEB_SEARCH"
-async def async_final_answer_stream(query:str, doc_id:str |None = None, session_summary:str| None=None):
-    state = _initial_state(query,doc_id, session_summary)
-    route = route_query(state)
-    if route == "RAG_SEARCH":
-        state.update(prepare_rag_windows(state))
-        state.update(reason_over_window(state))
-
-        while decide_next_step(state) == "NEXT_WINDOW":
-            state.update(load_next_window(state))
-            state.update(reason_over_window(state))
-
-        prompt = (
-            f"from the user query : {state['query']}\n"
-            f"retrieve answer from the context : {state['current_window']}\n"
-            f"please give a comprehensive well structured response for the user\n"
-            f"Answer only using the context\n"
-        )
-        
-        async for chunk in llm_model.astream([HumanMessage(content=prompt)]):
-            content = getattr(chunk, "content", "") or ""
-            if content:
-                yield content
 
 def route_query(state: AgentState) -> str:
     """Route which path to take according to the user's query, rag or web or direct llm response"""
@@ -518,6 +496,36 @@ def _initial_state(query: str, doc_id: str | None = None, session_summary: str |
         "rest": 0,
         "session_summary": session_summary or "No conversation yet.",
     }
+
+async def async_final_answer_stream(query:str, doc_id:str |None = None, session_summary:str| None=None):
+    """Stream the resulted text in a sequencial manner rather than sending at ones, send it chunk by chunk"""
+    state = _initial_state(query,doc_id, session_summary)
+    route = route_query(state)
+    if route == "RAG_SEARCH":
+        state.update(prepare_rag_windows(state))
+        state.update(reason_over_window(state))
+
+        while decide_next_step(state) == "NEXT_WINDOW":
+            state.update(load_next_window(state))
+            state.update(reason_over_window(state))
+
+        prompt = (
+            f"from the user query : {state['query']}\n"
+            f"retrieve answer from the context : {state['current_window']}\n"
+            f"please give a comprehensive well structured response for the user\n"
+            f"Answer only using the context\n"
+        )
+        
+        async for chunk in llm_model.astream([HumanMessage(content=prompt)]):
+            content = getattr(chunk, "content", "") or ""
+            if content:
+                yield content
+        return
+    
+    result = await app.ainvoke(state)
+    answer = result.get("final_answer", "")
+    if answer:
+        yield answer
 
 async def async_final_answer(
     query: str,
