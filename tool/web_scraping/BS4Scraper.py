@@ -10,7 +10,7 @@ class bs4scraper():
     def __init__(self):
         self.timeout = 10
         self.header = {
-            "user_agent" : (
+            "user-agent" : (
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                 "Chrome/120.0 Safari/537.36"
             )
