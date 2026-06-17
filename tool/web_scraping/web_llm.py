@@ -43,7 +43,7 @@ class WEB_LLM:
         response_parts = []
         for chunk in llm.stream(PROMPT):
             content = getattr(chunk, "content", "") or ""
-            print(content, end="", flush=True)
+            # print(content, end="", flush=True)
             response_parts.append(content)
 
         return "".join(response_parts)
