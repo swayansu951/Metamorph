@@ -211,7 +211,7 @@ def _stringify_context(context) -> str:
         return str(context)
 def new_web_crawler(state:AgentState) -> AgentState:
     """uses new crawler logic i.e. bs4+ddgs"""
-    context = web_pipeline.pipeline({"qeury" : state["query"]})
+    context = web_pipeline.pipeline({"query" : state["query"]})
     return {
         "context" : context,
         "all_window" : [context],
