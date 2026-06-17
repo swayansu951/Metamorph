@@ -2,7 +2,7 @@ import asyncio
 from simple_rag.main import GENERATE
 from typing import TypedDict, Optional
 from langchain_ollama import ChatOllama
-from .tool.web_scraping.web_rag_pipeline import PIPELINE
+from tool.web_scraping.web_rag_pipeline import PIPELINE
 from tool.webscraping import run_pipeline
 from langgraph.graph.message import add_messages
 from langgraph.graph import StateGraph,END,START
