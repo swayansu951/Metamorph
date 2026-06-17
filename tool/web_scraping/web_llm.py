@@ -16,7 +16,7 @@ class WEB_LLM:
         context = "\n\n".join(
             f"Source: {item.get('source_url', '')}\n"
             f"Title: {item.get('title', '')}\n"
-            f"Content: {item.get('chunk') or item.get('media_text', '')}"
+            f"Content: {(item.get('chunk') or item.get('media_text', ''))[:1500]}"
             for item in data
         )
 

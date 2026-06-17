@@ -36,12 +36,36 @@ class PIPELINE:
         self.web_llm = WEB_LLM()# after all the extraction and storage, the data goes to llm and then give a response
         # self.ddgs_search = duckduckgo()# ddgs for news search, media seach
 
+    def _snippet_context(self, search_results: List[Dict], query: str, limit: int = 6) -> List[Dict]:
+        """Use DDGS snippets as a fallback when pages cannot be scraped."""
+        snippets = []
+        for result in search_results:
+            if result.get("result_type") not in {"text", "news"}:
+                continue
+            snippet = result.get("snippet") or ""
+            url = result.get("url") or ""
+            title = result.get("title") or ""
+            if not snippet.strip():
+                continue
+            snippets.append({
+                "query": query,
+                "title": title,
+                "chunk": snippet,
+                "source_url": url,
+                "rank": result.get("rank", 0),
+            })
+            if len(snippets) >= limit:
+                break
+        return snippets
+
     def pipeline(self, payload:pipelineState) -> str:
         payload["scraped_result"] = [] # to prevent from keyError if something get like {"query" :  "something.."}
         payload["stored_result"] = []# to prevent from keyError if something get like {"query" :  "something.."}
         payload["retrieved_content"] = []
         payload["search_result"] = []
         payload["response"] = ""
+        start_text_count = len(self.store_scraper.text_payload)
+
         filtered = self.query_filter.query_filer({
             "query" : payload["query"],
             "output" : {},
@@ -55,8 +79,12 @@ class PIPELINE:
         payload["search_result"] = self.ddgs_finder.search(payload["filtered_query"]) # search result from the filtered query, safe search is already applied inside the search function 
 
         for result in payload["search_result"]:
-            if result["result_type"] not in {"text", "news"}: continue
-            page = self.bs4_scraper.soupscraper(result["url"]) # catch the urls only
+            if result.get("result_type") not in {"text", "news"}:
+                continue
+            url = result.get("url")
+            if not url:
+                continue
+            page = self.bs4_scraper.soupscraper(url) # catch the urls only
 
             if not page:continue
 
@@ -67,9 +95,17 @@ class PIPELINE:
             storage_result = self.store_scraper.scrape_page(data=page, query=payload["query"])
             payload["stored_result"].append(storage_result)
 
-        payload["retrieved_content"] += self.store_scraper.hybrid_search(query=payload["query"])# use by default top 6 retriever logic according to the user query
+        fresh_content = self.store_scraper.text_payload[start_text_count:]
+        if fresh_content:
+            payload["retrieved_content"] = fresh_content[:6]
+        else:
+            payload["retrieved_content"] = self._snippet_context(
+                payload["search_result"],
+                payload["query"],
+            )
+
         if not payload["retrieved_content"]:
-            payload["response"] = "I could not retrieve enough web context to answer reliably."
+            payload["response"] = "I could not retrieve fresh web context to answer reliably."
             return payload["response"]
         payload["response"] += self.web_llm.LLM_RESPONSE(data=payload["retrieved_content"], query=payload["query"])
 
