@@ -1,8 +1,8 @@
-import ollama
 import asyncio
 from simple_rag.main import GENERATE
 from typing import TypedDict, Optional
 from langchain_ollama import ChatOllama
+from .tool.web_scraping.web_rag_pipeline import PIPELINE
 from tool.webscraping import run_pipeline
 from langgraph.graph.message import add_messages
 from langgraph.graph import StateGraph,END,START
@@ -209,7 +209,16 @@ def _stringify_context(context) -> str:
         return "".join(str(part) for part in context)
     except TypeError:
         return str(context)
-
+def new_web_crawler(state:AgentState) -> AgentState:
+    """uses new crawler logic i.e. bs4+ddgs"""
+    context = PIPELINE.pipeline(state["query"])
+    return {
+        "context" : context,
+        "all_window" : [context],
+        "current_window" : context,
+        "source" : "web",
+        "cursor" : 0,
+    }
 async def _run_web_pipeline(query: str) -> str:
     """run asyncio web search pipeline"""
 
@@ -431,10 +440,11 @@ agentGraph = StateGraph(AgentState)
 # create nodes..
 agentGraph.add_node("llm_direct", direct_answer)
 agentGraph.add_node("rag_system",prepare_rag_windows)
-agentGraph.add_node("web_system", web_search)
+# agentGraph.add_node("web_system", web_search)
 agentGraph.add_node("next_window", load_next_window)
 agentGraph.add_node("final_llm_answer", finalize_answer)
 agentGraph.add_node("clarity_check", reason_over_window)
+agentGraph.add_node("web_scraper", new_web_crawler)
 
 # create edges..
 agentGraph.add_conditional_edges(
@@ -442,14 +452,14 @@ agentGraph.add_conditional_edges(
     route_query,
     {
         "RAG_SEARCH" : "rag_system",
-        "WEB_SEARCH" : "web_system",
+        "WEB_SEARCH" : "web_scraper",
         "LLM_RESPONSE" : "llm_direct", # to be added in the decide_initial_routing
     }
 )
 
 # agentGraph.add_edge("rag_system", "next_window")
 agentGraph.add_edge("rag_system", "clarity_check")
-agentGraph.add_edge("web_system", "clarity_check")
+agentGraph.add_edge("web_scraper", "clarity_check")
 agentGraph.add_edge("next_window", "clarity_check")
 agentGraph.add_edge("llm_direct", END)
 

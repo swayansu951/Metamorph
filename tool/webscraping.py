@@ -1,17 +1,18 @@
 # Advanced web crawling technique...
 # Dedicates on high performance with high quality and accurate retrieval.
 # No case of halucination and misliding of information.
-
+"""crawl4ai, web crawler tool"""
 import re
 import json
 import torch
 import ollama
 import asyncio
+from pathlib import Path
 from llama_cpp import llama
 from pydantic import BaseModel
 from langchain_core.tools import tool
 from crawl4ai.async_configs import CacheMode
-from duckduckgo_search import duckduckgo_search
+from ddgs import DDGS
 from crawl4ai.deep_crawling.scorers import KeywordRelevanceScorer
 from crawl4ai.markdown_generation_strategy import DefaultMarkdownGenerator
 from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, BrowserConfig, CacheMode, LLMExtractionStrategy, LLMConfig
@@ -22,7 +23,7 @@ USE_LOCAL_SYSTEM = True
 
 # DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
-
+iamge_path = Path("./images/")
 reranker_model = None
 
 LOCAL_LLM = None
@@ -95,7 +96,7 @@ def reranker(query: str, crawled_data: list):
     return [candidates[idx]["text"] for idx in ranked_indices[:3]]
 
 def generate_response(query:str, context:list):
-    """LLM response"""
+    """VLM response"""
     unified_context = "source".join(context)
     SYSTEM_PROMPT = ("""
                     you are an adversarial information extractor, extract information according to the user's query.\n
@@ -117,17 +118,18 @@ def generate_response(query:str, context:list):
         f"<|start_header_id|>assistant<|end_header_id|>\n\n"
     )
     
-    response = ollama.chat(model="llama3.2:3b", 
-                                    stream=True, 
-                                    think="medium", 
-                                    options={"temperature" :0.1,
-                                            "num_ctx" : 4150,
-                                            "num_predict" : 512,
-                                            'num_gpu' : -1,
-                                            },
-                                    prompt=FULL_PROMPT,
-                                    keep_alive=3,
-                                    )
+    response = ollama.chat(model="qwen2.5vl",
+                           images=[iamge_path], 
+                            stream=True, 
+                            think="medium", 
+                            options={"temperature" :0.1,
+                                    "num_ctx" : 4150,
+                                    "num_predict" : 512,
+                                    'num_gpu' : -1,
+                                    },
+                            prompt=FULL_PROMPT,
+                            keep_alive=3,
+                            )
 
     for chunk in response:
         for chunk in response:
