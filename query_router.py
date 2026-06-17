@@ -33,7 +33,7 @@ class AgentState(TypedDict):
 
 # Simple RAG response generator
 generator = GENERATE()
-
+web_pipeline = PIPELINE()
 # widely used system prompt..
 system_prompt = SystemMessage("Answer the question using the context below. If the answer is not found in the context or not relevant or no document uploaded, then use web crawling to get answer'")
 
@@ -211,7 +211,7 @@ def _stringify_context(context) -> str:
         return str(context)
 def new_web_crawler(state:AgentState) -> AgentState:
     """uses new crawler logic i.e. bs4+ddgs"""
-    context = PIPELINE.pipeline(state["query"])
+    context = web_pipeline.pipeline({"qeury" : state["query"]})
     return {
         "context" : context,
         "all_window" : [context],
