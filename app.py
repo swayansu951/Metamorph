@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import List, Optional
 from pydantic import BaseModel, Field
 from datetime import datetime, timezone
-from query_router import async_final_answer
+from query_router import async_final_answer_stream
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
@@ -257,7 +257,7 @@ async def chat(
         if not resolved_doc_id and asks_about_uploaded_document(query):
             resolved_doc_id = latest_indexed_doc_id()
 
-        async for token in async_final_answer(
+        async for token in async_final_answer_stream(
             query,
             resolved_doc_id or None,
             session_summary.strip() or None

@@ -345,7 +345,7 @@ def decide_next_step(state:AgentState) -> AgentState:
     #     return "RAG_SEARCH"
     
     # else: state["use_web"] = True ;  return "WEB_SEARCH"
-async def async_final_answer(query:str, doc_id:str |None = None, session_summary:str| None=None):
+async def async_final_answer_stream(query:str, doc_id:str |None = None, session_summary:str| None=None):
     state = _initial_state(query,doc_id, session_summary)
     route = route_query(state)
     if route == "RAG_SEARCH":
