@@ -11,7 +11,7 @@ def RAG_router(query: str, doc_id: str) -> str:
 
     context = generator.retrieve_context(query=query, doc_id=doc_id)
     if not context or not context.strip():
-        return "No_Relevent_Context"
+        return "WEB_SEARCH" # use WEB_SEARCH instead
 
     return context
 
@@ -21,7 +21,7 @@ def make_rag_tool(doc:str):
         """uses the RAG architecture to search answer from a given document"""
         
         context = generator.retrieve_context(query, doc)
-        if not context or not context.strip() : return "No_Relevent_Context"
+        if not context or not context.strip() : return "WEB_SEARCH" # use web search instead
 
         return context
     

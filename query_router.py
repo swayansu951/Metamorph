@@ -41,14 +41,14 @@ system_prompt = SystemMessage("Answer the question using the context below. If t
 messages = [{'role' : 'system' , 'content' : system_prompt}]
 
 # Single unit controling model..
-llm_model = ChatOllama(model='llama3.1:8b-instruct-q5_K_S', 
+llm_model = ChatOllama(model='gemma4-e4b_q4_k_m', 
                         stream=True, 
                         num_gpu=-1,
                         keep_alive=15,
                         temperature=0.1,
                         )
 
-direct_llm_model = ChatOllama(model='llama3.2:3b', 
+direct_llm_model = ChatOllama(model='gemma4-e4b_q4_k_m', 
                         stream=True, 
                         num_gpu=-1,
                         keep_alive=3,
