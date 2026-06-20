@@ -6,6 +6,15 @@ from .uuid_registry import REGISTRY
 from typing import List, Dict, Any
 
 TRUSTED_SITES = [
+    "en.wikipedia.org",
+    "pubmed.ncbi.nlm.nih.gov",
+    "medlineplus.gov",
+    "webmd.com",
+    "healthline.com",
+    "investing.com",
+    "marketwatch.com ",
+    "investopedia.com",
+    "mayoclinic.org", # may contain adult things, so must be strictly maintained
     "wikipedia.org",
     "github.com",
     "stackoverflow.com",
@@ -32,6 +41,15 @@ def safe_search(query:str) -> List[Dict[str, Any]]:
             Refine the query to get better search result.\n
             The trusted sites are:\n
               {
+                "en.wikipedia.org",
+                "pubmed.ncbi.nlm.nih.gov",
+                "medlineplus.gov",
+                "webmd.com",
+                "healthline.com",
+                "investing.com",
+                "marketwatch.com ",
+                "investopedia.com",
+                "mayoclinic.org",
                 "wikipedia.org",
                 "github.com",
                 "stackoverflow.com",
@@ -44,6 +62,37 @@ def safe_search(query:str) -> List[Dict[str, Any]]:
                 "pubmed.ncbi.nlm.nih.gov",
                 "ijmr.org.in",
               }
+            check for these 1st:
+            if the query is more likely technology, coding based or similar then only use :
+              (
+                "github.com",
+                "stackoverflow.com",
+                "geeksforgeeks.org",
+
+              )
+            if the query is more likely psycological then only use :
+              (
+                "en.wikipedia.org",
+                "pubmed.ncbi.nlm.nih.gov",
+              
+              )
+            if the query is more likely health and medical related then only use :
+              (
+                "medlineplus.gov",
+                "webmd.com",
+                "healthline.com",
+              )
+            if the query is more likely finance, stock and investement then only use :
+              (
+                "investing.com",
+                "marketwatch.com ",
+                "investopedia.com",
+              )
+            for this it is stricktly used, if more needed then only use cause its has age restriction, if the query is more likely adult or 18+ problems like pelvic problems or similar then only use :
+              (
+                "mayoclinic.org",
+              )
+
             Return the output in this order:
               ["query site:'choosed site over here'"], 
             
