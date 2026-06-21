@@ -1,4 +1,5 @@
 import asyncio
+import re
 from simple_rag.main import GENERATE
 from typing import TypedDict, Optional
 from langchain_ollama import ChatOllama
@@ -416,6 +417,15 @@ def decide_initial_routing(state: AgentState) -> str:
         return "WEB_SEARCH"
     return "RAG_SEARCH"
 
+def _extract_markdown_images(text: str) -> str:
+    """Preserve image markdown emitted by the retrieval layer."""
+    matches = re.findall(r"!\[[^\]]*\]\(https?://[^\s)]+\)", text or "")
+    unique_matches = list(dict.fromkeys(matches))
+    if not unique_matches:
+        return ""
+    return "\n\nRelevant images:\n" + "\n".join(unique_matches)
+
+
 def finalize_answer(state:AgentState) -> AgentState:
     """Retrieves the final answer from big llm"""
 
@@ -428,6 +438,7 @@ def finalize_answer(state:AgentState) -> AgentState:
               )
     
     response = llm_model.invoke([HumanMessage(content=prompt)]).content
+    response = (response or "").strip() + _extract_markdown_images(state.get("current_window", ""))
    
     return {"final_answer" : response}
 

@@ -38,10 +38,48 @@ function createRequestHeaders(extraHeaders = {}) {
     return { ...REQUEST_HEADERS, ...extraHeaders };
 }
 
+function renderMessageContent(container, text) {
+    container.textContent = '';
+
+    const imagePattern = /!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g;
+    let lastIndex = 0;
+    let match;
+
+    function appendText(value) {
+        if (!value) {
+            return;
+        }
+        const textNode = document.createTextNode(value);
+        container.appendChild(textNode);
+    }
+
+    while ((match = imagePattern.exec(text)) !== null) {
+        appendText(text.slice(lastIndex, match.index));
+
+        const link = document.createElement('a');
+        link.href = match[2];
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.className = 'message-image-link';
+
+        const image = document.createElement('img');
+        image.src = match[2];
+        image.alt = match[1] || 'Retrieved image';
+        image.loading = 'lazy';
+        image.className = 'message-image';
+
+        link.appendChild(image);
+        container.appendChild(link);
+        lastIndex = imagePattern.lastIndex;
+    }
+
+    appendText(text.slice(lastIndex));
+}
+
 function appendMessage(text, sender) {
     const msgDiv = document.createElement('div');
     msgDiv.classList.add('message', sender);
-    msgDiv.textContent = text;
+    renderMessageContent(msgDiv, text);
     chatBox.appendChild(msgDiv);
     chatBox.scrollTop = chatBox.scrollHeight;
     return msgDiv;
@@ -536,7 +574,7 @@ async function sendMessage() {
 
         if (!response.body) {
             const directResponse = await response.text();
-            botMessage.textContent = directResponse;
+            renderMessageContent(botMessage, directResponse);
             if (!hasShownFirstReviewPopup && !hasResolvedFirstReview) {
                 latestReviewContext = {
                     query: text,
@@ -578,7 +616,7 @@ async function sendMessage() {
 
         fullText += decoder.decode();
         const finalAnswer = fullText.trim() ? fullText : 'No response generated.';
-        botMessage.textContent = finalAnswer;
+        renderMessageContent(botMessage, finalAnswer);
         updateActiveSession((session) => {
             session.docId = docId;
             if (!docId) {

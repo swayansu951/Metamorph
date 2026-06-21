@@ -266,6 +266,21 @@ textarea {
     word-break: break-word;
 }
 
+.message-image-link {
+    display: block;
+    margin-top: 10px;
+}
+
+.message-image {
+    display: block;
+    width: min(100%, 420px);
+    max-height: 280px;
+    object-fit: contain;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: rgba(255, 248, 226, 0.28);
+}
+
 .user {
     align-self: flex-end;
     background: var(--ink);

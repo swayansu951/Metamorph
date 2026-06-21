@@ -58,6 +58,28 @@ class PIPELINE:
                 break
         return snippets
 
+    def _media_context(self, search_results: List[Dict], query: str, limit: int = 3) -> List[Dict]:
+        """Keep direct DDGS image/video results available for the web response."""
+        media_items = []
+        for result in search_results:
+            if result.get("result_type") not in {"image", "video"}:
+                continue
+            media_url = result.get("media_url") or result.get("thumbnail")
+            if not media_url:
+                continue
+            media_items.append({
+                "query": query,
+                "title": result.get("title") or "Retrieved media",
+                "chunk": result.get("snippet") or result.get("title") or "Retrieved media",
+                "media_text": result.get("title") or "Retrieved media",
+                "source_url": result.get("url") or "",
+                "rank": result.get("rank", 0),
+                "image": [media_url],
+            })
+            if len(media_items) >= limit:
+                break
+        return media_items
+
     def pipeline(self, payload:pipelineState) -> str:
         payload["scraped_result"] = [] # to prevent from keyError if something get like {"query" :  "something.."}
         payload["stored_result"] = []# to prevent from keyError if something get like {"query" :  "something.."}
@@ -96,6 +118,7 @@ class PIPELINE:
             payload["stored_result"].append(storage_result)
 
         fresh_content = self.store_scraper.text_payload[start_text_count:]
+        media_content = self._media_context(payload["search_result"], payload["query"])
         if fresh_content:
             payload["retrieved_content"] = fresh_content[:6]
         else:
@@ -103,6 +126,9 @@ class PIPELINE:
                 payload["search_result"],
                 payload["query"],
             )
+
+        if media_content:
+            payload["retrieved_content"].extend(media_content)
 
         if not payload["retrieved_content"]:
             payload["response"] = "I could not retrieve fresh web context to answer reliably."
