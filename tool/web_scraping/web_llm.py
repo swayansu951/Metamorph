@@ -1,4 +1,4 @@
-from typing import Dict, List, Any
+﻿from typing import Dict, List, Any
 from .uuid_registry import REGISTRY
 from langchain_ollama.chat_models import ChatOllama
 
@@ -89,7 +89,7 @@ class WEB_LLM:
         response_parts = []
         for chunk in llm.stream(prompt):
             content = getattr(chunk, "content", "") or ""
-            print(content, end="", flush=True)
+            # print(content, end="", flush=True)
             response_parts.append(content)
 
         return "".join(response_parts).strip() + self._format_image_markdown(data, image_urls)
