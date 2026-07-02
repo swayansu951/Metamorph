@@ -30,19 +30,19 @@ The project was built to explore practical RAG system design with LangGraph, Lan
 ## Architecture Overview
 
 ```text
-Frontend chat UI
-        |
-        v
-FastAPI backend
-        |
-        v
-LangGraph query router -------|
-   |            |             |
-   v            v             v
-PDF RAG     Web RAG       Direct LLM
-   |            |
-   v            v
-FAISS DB     DDGS + BS4 + SearchDB
+                Frontend chat UI
+                        |
+                        v
+                FastAPI backend
+                        |
+                        v
+        |------ LangGraph query router -------|
+        |                |                    |
+        v                v                    v
+      PDF RAG          Web RAG             Direct LLM
+        |                |
+        v                v
+      FAISS DB     DDGS + BS4 + SearchDB
 ```
 
 ## How It Works
