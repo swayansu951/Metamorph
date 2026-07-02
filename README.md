@@ -1,4 +1,4 @@
-﻿# Metamorph: Local Research Assistant
+# Metamorph: Local Research Assistant
 
 Metamorph is a local-first research assistant that combines document-based RAG, web retrieval, and agent orchestration. It lets a user upload a PDF, ask questions about that document, or fall back to web search when the question needs fresh external information.
 
@@ -189,7 +189,8 @@ const API_BASE_URL = "http://localhost:8000";
 
 ## Contribution
 
-If you like to introduce some changes or want to be a part of this project you are wellcomed to contribute in this project: ping me on @sahuswayansu240@gmail.com
+Contributions are welcome. If you would like to improve the project, suggest changes, or collaborate on new features, feel free to reach out at `sahuswayansu240@gmail.com`.
+
 ## License
 
 This project is licensed under the MIT License. See `LICENSE` for details.
