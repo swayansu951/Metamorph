@@ -4,7 +4,6 @@ from simple_rag.main import GENERATE
 from typing import TypedDict, Optional
 from langchain_ollama import ChatOllama
 from tool.web_scraping.web_rag_pipeline import PIPELINE
-from tool.webscraping import run_pipeline
 from langgraph.graph.message import add_messages
 from langgraph.graph import StateGraph,END,START
 from typing import TypedDict, Annotated , Sequence
@@ -222,6 +221,7 @@ def new_web_crawler(state:AgentState) -> AgentState:
     }
 async def _run_web_pipeline(query: str) -> str:
     """run asyncio web search pipeline"""
+    from tool.webscraping import run_pipeline
 
     selected_category = select_web_category(query)
     selected_urls = URLS[selected_category]
