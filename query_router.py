@@ -54,14 +54,14 @@ system_prompt = SystemMessage("""
 message = [system_prompt]
 
 # Single unit controling model..
-llm_model = ChatOllama(model='gemma-4-E4B-it-Q5_K_M', 
+small_LLM = ChatOllama(model='llama3.2:3b', 
                         stream=True, 
                         num_gpu=-1,
                         keep_alive=15,
                         temperature=0.1,
                         )
 
-direct_llm_model = ChatOllama(model='gemma-4-E4B-it-Q5_K_M', 
+large_LLM = ChatOllama(model='gemma-4-E4B-it-Q5_K_M', 
                         stream=True, 
                         num_gpu=-1,
                         keep_alive=3,
@@ -148,7 +148,7 @@ def direct_answer(state: AgentState) -> AgentState:
                             """),
                 HumanMessage(content=state["query"])
             ]
-    response = direct_llm_model.invoke(prompt).content
+    response = large_LLM.invoke(prompt).content
     return {"final_answer": response}
 
 def prepare_rag_windows(state:AgentState) -> AgentState:
@@ -332,7 +332,7 @@ def reason_over_window(state:AgentState) -> AgentState:
                 HumanMessage(content=state["query"])
             ] 
 
-    decision = llm_model.invoke(prompt).content.lower()
+    decision = small_LLM.invoke(prompt).content.lower()
     enough = "enough" in decision and "need_more" not in decision
     
     return {"enough": enough}
@@ -440,7 +440,7 @@ def route_query(state: AgentState) -> str:
                             ),
                 HumanMessage(content=state["query"])
             ]
-    decision = llm_model.invoke(prompt).content.strip().upper()
+    decision = small_LLM.invoke(prompt).content.strip().upper()
 
     if "RAG_SEARCH" in decision and doc_id:
         return "RAG_SEARCH"
@@ -479,7 +479,7 @@ def finalize_answer(state:AgentState, role:str ="drafter_agent", task:str="final
             f"if the context does not contain the answer, say you could not find it from the uploaded document."
               )
     
-    response = llm_model.stream(prompt).content
+    response = large_LLM.stream(prompt).content
     response = (response or "").strip() + _extract_markdown_images(state.get("current_window", ""))
    
     return {"final_answer" : response}
@@ -570,7 +570,7 @@ async def async_final_answer_stream(query:str, doc_id:str |None = None, session_
             f"Answer only using the context\n"
         )
         
-        async for chunk in llm_model.astream([HumanMessage(content=prompt)]):
+        async for chunk in large_LLM.astream([HumanMessage(content=prompt)]):
             content = getattr(chunk, "content", "") or ""
             if content:
                 yield content

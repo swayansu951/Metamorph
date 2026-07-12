@@ -27,7 +27,7 @@ TRUSTED_SITES = [
     "pubmed.ncbi.nlm.nih.gov",
     "ijmr.org.in",
 ]
-model = "gemma4-e4b_q4_k_m"
+model = "gemma-4-E4B-it-Q5_K_M"
 
 def safe_search(query:str) -> List[Dict[str, Any]]:
     """Defines which domains to use only, with safe query and data extraction safety.\n
