@@ -11,7 +11,7 @@ import os
 from pathlib import Path
 from uuid import uuid4
 from datetime import datetime
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from typing import TypedDict, Dict, Optional
 
 @dataclass
@@ -37,6 +37,13 @@ class ID_REGISTRY():
         self._agent : Dict[str, uuidInfo] = {} # make the structure of the log
 
     def save_details(self):
+        serializable_agents = {}
+
+        for agent_name, info in self._agent.items():
+            data = asdict(info)
+            data["created"] = info.created.isoformat()
+            data["last_used"] = info.last_used.isoformat()
+            serializable_agents[agent_name] = data
         with open(self.id_registry, "w", encoding="utf-8") as f:
             json.dump(self._agent, f, ensure_ascii= False, indent=4)   
 
