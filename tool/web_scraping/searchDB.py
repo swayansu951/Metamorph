@@ -61,7 +61,6 @@ class searchDB:
 			self.path = Path(path).resolve()
 
 		#Basic path define...
-		self.path = Path(path)
 		self.payload_path = self.path/"payload"
 		self.vector_path = self.path/"vectors"
 		self.media_path = self.path/"media"
