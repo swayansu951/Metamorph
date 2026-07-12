@@ -2,10 +2,21 @@
     structure:\n
     encode\n
     get_sentence_dimenstion\n"""
+import os
 from sentence_transformers import SentenceTransformer
 from dotenv import load_dotenv
 from huggingface_hub import login
-login("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")
+
+load_dotenv()
+token = os.getenv("HF_TOKEN")
+
+if token:
+    try:
+        login(token=token)
+    except Exception as exc:
+        print(f"[-] WARNING::Hugging Face login skipped: {str(exc)}")
+else:
+    print("[-] WARNONG::Invalid credentials: 404 token not found!")
 
 class EMBEDDINGMODEL:
     """ loads the model only when it will be needed to save memmory\n
