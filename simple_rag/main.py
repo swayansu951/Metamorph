@@ -14,7 +14,7 @@ if token:
     try:
         login(token=token)
     except Exception as exc:
-        print(f"[-] WARNING::Hugging Face login skipped: {exc}")
+        print(f"[-] WARNING::Hugging Face login skipped: {str(exc)}")
 else:
     print("[-] WARNONG::Invalid credentials: 404 token not found!")
     
