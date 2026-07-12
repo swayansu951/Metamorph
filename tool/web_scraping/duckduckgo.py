@@ -1,6 +1,6 @@
 from ddgs import DDGS
 from urllib.parse import urlparse
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_ollama.chat_models import ChatOllama
 from .uuid_registry import REGISTRY
 from typing import List, Dict, Any
@@ -36,7 +36,7 @@ def safe_search(query:str) -> List[Dict[str, Any]]:
     choosed_domains = " OR ".join(f"site:{domains}" for domains in TRUSTED_SITES)
     sites =[]
 
-    PROMPT = (""" 
+    PROMPT = [SystemMessage(content=""" 
             You are an expert search filter assistant, filter that which search url to use according to the query provided.\n
             Refine the query to get better search result.\n
             The trusted sites are:\n
@@ -99,7 +99,8 @@ def safe_search(query:str) -> List[Dict[str, Any]]:
             Example : 
             ["latest tech news site:wikipedia.org", "latest tech news site:reddit.com"]
             
-            """)
+            """),
+            HumanMessage(content=query)]
     
     agent_name = "site_agent"
     id = REGISTRY.get_or_create_agent(agent_name)
@@ -111,7 +112,7 @@ def safe_search(query:str) -> List[Dict[str, Any]]:
         temperature = 0.1,
         keep_alive=6,
     )
-    response = data.invoke(PROMPT + "\n\n" + query)
+    response = data.invoke(PROMPT)
     
     return {
         "agent_id" : id,
