@@ -381,21 +381,21 @@ def route_query(state: AgentState) -> str:
     doc_id = state.get("doc_id")
     query = state["query"].lower()
     web_triggers = [
-        "current",
-        "latest",
-        "recent",
-        "today",
-        "news",
-        "breaking",
-        "live",
-        "now",
-        "this week",
-        "this month",
-        "updates",
-        "update",
+        r"\bcurrent\b",
+        r"\blatest\b",
+        r"\brecent\b",
+        r"\bnew\b",
+        r"\bnewest\b",
+        r"\btoday\b",
+        r"\bnow\b",
+        r"\bnews\b",
+        r"\bupdates?\b",
+        r"\bresearch papers?\b",
+        r"\bnew papers?\b",
+        r"\bpublished\b",
     ]
 
-    if any(trigger in query for trigger in web_triggers):
+    if any(re.search(pattern, query) for pattern in web_triggers):
         return "WEB_SEARCH"
 
     direct_triggers = {
@@ -447,7 +447,9 @@ def route_query(state: AgentState) -> str:
 
     if "WEB_SEARCH" in decision:
         return "WEB_SEARCH"
-
+    
+    route= route_query(state)
+    print(f"Selected route : {route}")
     return "LLM_RESPONSE"
 
 def decide_initial_routing(state: AgentState) -> str:
