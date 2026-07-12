@@ -148,7 +148,7 @@ def direct_answer(state: AgentState) -> AgentState:
                             """),
                 HumanMessage(content=state["query"])
             ]
-    response = direct_llm_model.invoke([HumanMessage(content=prompt)]).content
+    response = direct_llm_model.invoke(prompt).content
     return {"final_answer": response}
 
 def prepare_rag_windows(state:AgentState) -> AgentState:
@@ -332,7 +332,7 @@ def reason_over_window(state:AgentState) -> AgentState:
                 HumanMessage(content=state["query"])
             ] 
 
-    decision = llm_model.invoke([HumanMessage(content=prompt)]).content.lower()
+    decision = llm_model.invoke(prompt).content.lower()
     enough = "enough" in decision and "need_more" not in decision
     
     return {"enough": enough}
@@ -479,7 +479,7 @@ def finalize_answer(state:AgentState, role:str ="drafter_agent", task:str="final
             f"if the context does not contain the answer, say you could not find it from the uploaded document."
               )
     
-    response = llm_model.stream([HumanMessage(content=prompt)]).content
+    response = llm_model.stream(prompt).content
     response = (response or "").strip() + _extract_markdown_images(state.get("current_window", ""))
    
     return {"final_answer" : response}
