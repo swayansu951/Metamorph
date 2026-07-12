@@ -32,6 +32,7 @@ set UUID with a UUID registry (by default use python built in library uuid) for 
 """
 import pickle
 import shutil
+import threading
 import os, re,json
 import numpy as np
 from uuid import uuid4
@@ -79,6 +80,7 @@ class searchDB:
 		#bm25 path define...
 		self.texts_bm25_file = self.bm25_path/"chunks_bm25.pkl"
 
+		self._save_lock = threading.Lock()
 		self._setup_dir()
 		self._load_db()
 
@@ -111,7 +113,13 @@ class searchDB:
 	
 	def _save_vectors(self, file_path:Path, data:np.ndarray):
 		"""saves the """
-		np.save(file_path, data.astype("float32"))# save the array in a binary file 
+		file_path.parent.mkdir(parents=True, exist_ok=True)
+		temp_file = file_path.with_suffix(".tmp")
+
+		with temp_file.open("wb") as f:
+			np.save(f, data.astype("float32"))# save the array in a binary file 
+
+		os.replace(temp_file, file_path)
 		
 	def _load_db(self):
 		"""loads all the payload and vectors with pickle file in it"""
@@ -131,15 +139,16 @@ class searchDB:
 
 	def _save_all(self):
 		"""save by the functions, path and the file.."""
-		self._save_json(self.text_payload_file, self.text_payload)
-		self._save_json(self.image_payload_file, self.image_payload)
-		self._save_json(self.video_payload_file, self.video_payload)
+		with self._save_lock:	
+			self._save_json(self.text_payload_file, self.text_payload)
+			self._save_json(self.image_payload_file, self.image_payload)
+			self._save_json(self.video_payload_file, self.video_payload)
 
-		self._save_vectors(self.text_vectors_file, self.text_vectors)
-		self._save_vectors(self.image_vectors_file, self.image_vectors)
-		self._save_vectors(self.video_vectors_file, self.video_vectors)
+			self._save_vectors(self.text_vectors_file, self.text_vectors)
+			self._save_vectors(self.image_vectors_file, self.image_vectors)
+			self._save_vectors(self.video_vectors_file, self.video_vectors)
 
-		self.reload_bm25()
+			self.reload_bm25()
 
 	def _tokenize(self, text:str):
 		"""tokenize the texts"""
