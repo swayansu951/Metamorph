@@ -45,7 +45,7 @@ class ID_REGISTRY():
             data["last_used"] = info.last_used.isoformat()
             serializable_agents[agent_name] = data
         with open(self.id_registry, "w", encoding="utf-8") as f:
-            json.dump(self._agent, f, ensure_ascii= False, indent=4)   
+            json.dump(serializable_agents, f, ensure_ascii= False, indent=4)   
 
     def get_or_create_agent(self, agent_name : str) -> str:
         """use the pre-registered data or else creates a new agent with new uuid
