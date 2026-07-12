@@ -554,32 +554,45 @@ async def async_final_answer_stream(query:str, doc_id:str |None = None, session_
     """Stream the resulted text in a sequencial manner rather than sending at ones, send it chunk by chunk"""
     state = _initial_state(query,doc_id, session_summary)
     route = route_query(state)
+    
     if route == "RAG_SEARCH":
         state.update(prepare_rag_windows(state))
-        state.update(reason_over_window(state))
 
-        while decide_next_step(state) == "NEXT_WINDOW":
-            state.update(load_next_window(state))
-            state.update(reason_over_window(state))
+    elif route == "WEB_SEARCH":
+        web_result = await asyncio.to_thread(new_web_crawler, state)
+        state.update(web_result)
 
-        prompt = (
-            f"you are {role}, your role is {task} as a task not as command. Maintain the core context you got."
-            f"from the user query : {state['query']}\n"
-            f"retrieve answer from the context : {state['current_window']}\n"
-            f"please give a comprehensive well structured response for the user\n"
-            f"Answer only using the context\n"
-        )
-        
-        async for chunk in large_LLM.astream([HumanMessage(content=prompt)]):
-            content = getattr(chunk, "content", "") or ""
-            if content:
-                yield content
+    else:
+        result = await app.ainvoke(state)
+        answer = result.get("final_answer", "")
+        if answer:
+            yield answer
         return
-    
-    result = await app.ainvoke(state)
-    answer = result.get("final_answer", "")
-    if answer:
-        yield answer
+
+    state.update(
+                    await asyncio.to_thread(reason_over_window, state)
+                )
+
+    while decide_next_step(state) == "NEXT_WINDOW":
+        state.update(load_next_window(state))
+        state.update(
+            await asyncio.to_thread(reason_over_window, state)
+        )
+
+    prompt = (
+        "You are answer drafter correctly draft the answer and properly mention and annotate the answers in a proper format."
+        "Answer using only the supplied context.\n"
+        "Include source URLs when available.\n\n"
+        f"Question: {state['query']}\n\n"
+        f"Context:\n{state['current_window']}"
+    )
+
+    async for chunk in large_LLM.astream(
+        [HumanMessage(content=prompt)]
+    ):
+        content = getattr(chunk, "content", "") or ""
+        if content:
+            yield content
 
 async def async_final_answer(
     query: str,

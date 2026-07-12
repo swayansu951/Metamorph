@@ -1,6 +1,6 @@
-const API_BASE_URL = "https://armed-component-cartridge.ngrok-free.dev";
+const API_BASE_URL = window.location.origin;
 
-const REQUEST_HEADERS = { 'ngrok-skip-browser-warning': 'true' };
+const REQUEST_HEADERS = {};
 
 const chatBox = document.getElementById('chat-box');
 const userInput = document.getElementById('user-input');
@@ -708,3 +708,4 @@ userInput.addEventListener('keydown', (event) => {
         sendMessage();
     }
 });
+

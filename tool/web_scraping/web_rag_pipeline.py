@@ -118,21 +118,43 @@ class PIPELINE:
             payload["stored_result"].append(storage_result)
 
         fresh_content = self.store_scraper.text_payload[start_text_count:]
+        fresh_id = [item.get("id") for item in fresh_content if item.get("id")]
+        ranked_content = self.store_scraper.hybrid_search( query=payload["query"],
+                                                            top_k=len(self.store_scraper.text_payload), 
+                                                          )
+        fresh_ranked = [item for item in ranked_content if item.get("id") in fresh_id and self.ddgs_finder._is_allower_url(item.get("source_url", ""))]
+        payload["retrieved_content"] = fresh_ranked[:6]
+        
         media_content = self._media_context(payload["search_result"], payload["query"])
-        if fresh_content:
-            payload["retrieved_content"] = fresh_content[:6]
-        else:
+        
+        if not payload["retrieved_content"]: # If scraping produced nothing new, reuse relevant stored records.
+            payload["retrieved_content"] = [
+                                            item for item in ranked_content
+                                            if item.get("query") == payload["query"]
+                                            and self.ddgs_finder._is_allower_url(
+                                                item.get("source_url", "")
+                                            )
+                                        ][:6]
+
+        if not payload["retrieved_content"]: # Final fallback to DDGS snippets.
             payload["retrieved_content"] = self._snippet_context(
                 payload["search_result"],
                 payload["query"],
             )
 
-        if media_content:
+        if media_content: # Final fallback to DDGS snippets.
             payload["retrieved_content"].extend(media_content)
 
         if not payload["retrieved_content"]:
             payload["response"] = "I could not retrieve fresh web context to answer reliably."
             return payload["response"]
-        payload["response"] += self.web_llm.LLM_RESPONSE(data=payload["retrieved_content"], query=payload["query"])
+        
+        context = "\n\n".join(
+            f"Source: {item.get('source_url', '')}\n"
+            f"Title: {item.get('title', '')}\n"
+            f"Content: {item.get('chunk', '')}"
+            for item in payload["retrieved_content"]
+        )
 
-        return payload["response"]
+        return context
+    

@@ -6,7 +6,8 @@ import random
 import time
 from ddgs import DDGS
 from typing import Callable, Dict, List, Any
-from .duckduckgo import safe_search
+from .duckduckgo import safe_search, TRUSTED_SITES
+from urllib.parse import urlparse
 
 class DDGSSearch:
     """function:\n
@@ -116,8 +117,19 @@ class DDGSSearch:
                 if github_query not in candidates:
                     candidates.append(github_query)
 
-        return candidates or [query]
+        return candidates or [query]    
     
+    def _is_allower_url(self, url:str) -> bool:
+
+        hostname = (urlparse(url).hostname or "").lower()
+        hostname = hostname.removeprefix("www.")
+
+        for domain in TRUSTED_SITES:
+            domain = domain.removeprefix("www.").strip().lower()
+            if hostname == domain or hostname.startswith(f".{domain}"): return True
+
+        return False
+
     def search(self, payload : Dict[str, Any]) -> list[Dict[str, Any]]:
         """Search function using DDGS for url filtering. \n
             **input structure:** \n
@@ -158,7 +170,9 @@ class DDGSSearch:
                     print(r)
             
         """
-        site = safe_search(payload["query"])
+        site_filter = " OR ".join(f"site:{domain.strip()}" for domain in TRUSTED_SITES)
+        
+        site = {"allowed_domains" : TRUSTED_SITES}
         query = payload['query']
         query_candidates = self._query_candidates(payload)
         max_depth = payload.get('search_depth', 'quick')
@@ -176,12 +190,16 @@ class DDGSSearch:
                     try:
                         results = []
                         for candidate in query_candidates:
-                            searched_query = candidate
-                            results = self._search_with_backoff(lambda candidate=candidate: ddgs.text(
-                                query=candidate,
+                            search_query = f"{candidate} ({site_filter})"
+                            results = self._search_with_backoff(lambda search_qery=search_query : ddgs.text(
+                                query=search_query,
                                 max_results=max_result,
-                                timelimit=None,
+                                timelimit=timelimit,
                             ))
+                            results = [
+                                        item for item in results
+                                        if self._is_allower_url(item.get("href", ""))
+                                    ]
                             if results:
                                 break
                     except Exception as e:
@@ -207,12 +225,14 @@ class DDGSSearch:
                         )
                 
                 if "news" in modes:
+                    news_query = f"{query} ({site_filter})"
                     try:
                         results = self._search_with_backoff(lambda: ddgs.news(
-                        query=query,
+                        query=news_query,
                         max_results=max_result,
                         timelimit=timelimit,
                         ))
+                        results = [item for item in results if self._is_allower_url(item.get("url", ""))]
                     except Exception as e:
                         output.append(self._error_result("news", e, site))
                         results = []

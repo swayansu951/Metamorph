@@ -390,8 +390,8 @@ class searchDB:
 		 - semantic score and 
 		 - bm25 score"""
 		
-		semantic_chunk = self.semantic_search(query=query, vector_space="text") # kept for only text for now.
-		bm25_chunk = self.bm25_search(query=query)
+		semantic_chunk = self.semantic_search(query=query, vector_space="text", top_k=top_k) # kept for only text for now.
+		bm25_chunk = self.bm25_search(query=query, top_k=top_k)
 
 		combine = {} #combine the result into it..
 		final_result = [] # only keep the final result in it...

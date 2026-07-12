@@ -61,6 +61,10 @@ def safe_search(query:str) -> List[Dict[str, Any]]:
                 "idss.mit.edu",
                 "pubmed.ncbi.nlm.nih.gov",
                 "ijmr.org.in",
+                "arxiv.org",
+                "openreview.net",
+                "proceedings.mlr.press",
+                "aclanthology.org",
               }
             check for these 1st:
             if the query is more likely technology, coding based or similar then only use :
@@ -88,11 +92,18 @@ def safe_search(query:str) -> List[Dict[str, Any]]:
                 "marketwatch.com ",
                 "investopedia.com",
               )
+            for academic and research paper or related, it's an all rounder site to fetch:
+                            (
+                            "arxiv.org",
+                            "openreview.net",
+                            "proceedings.mlr.press",
+                            "aclanthology.org",
+                            )
             for this it is stricktly used, if more needed then only use cause its has age restriction, if the query is more likely adult or 18+ problems like pelvic problems or similar then only use :
               (
                 "mayoclinic.org",
               )
-
+                            
             Return the output in this order:
               ["query site:'choosed site over here'"], 
             
