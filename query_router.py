@@ -479,7 +479,7 @@ def finalize_answer(state:AgentState, role:str ="drafter_agent", task:str="final
             f"if the context does not contain the answer, say you could not find it from the uploaded document."
               )
     
-    response = large_LLM.stream(prompt).content
+    response = large_LLM.invoke([HumanMessage(content=prompt)]).content
     response = (response or "").strip() + _extract_markdown_images(state.get("current_window", ""))
    
     return {"final_answer" : response}
