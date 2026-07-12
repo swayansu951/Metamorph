@@ -1,5 +1,7 @@
-﻿from typing import Dict, List, Any
-from .uuid_registry import REGISTRY
+﻿import json
+from pathlib import Path
+from typing import Dict, List, Any
+from .uuid_registry import REGISTRY, uuidInfo
 from langchain_ollama.chat_models import ChatOllama
 
 model = "gemma4-e4b_q4_k_m"
@@ -8,8 +10,9 @@ id = REGISTRY.get_or_create_agent(agent_name)
 REGISTRY.task_counts(agent_name)
 
 class WEB_LLM:
-    def __init__(self):
+    def __init__(self, path = "uuid_registry"):
         self.model = model
+        
 
     def _collect_image_urls(self, data: List[Dict]) -> List[str]:
         image_urls = []
@@ -95,11 +98,12 @@ class WEB_LLM:
             temperature=0.1,
             keep_alive=6,
         )
-
         response_parts = []
         for chunk in llm.stream(prompt):
             content = getattr(chunk, "content", "") or ""
             # print(content, end="", flush=True)
             response_parts.append(content)
+        
+        REGISTRY.save_details()
 
         return "".join(response_parts).strip() + self._format_image_markdown(data, image_urls)
