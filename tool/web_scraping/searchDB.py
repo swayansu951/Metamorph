@@ -54,7 +54,12 @@ class searchDB:
 		output :
 		- search result from the database
 	"""
-	def __init__(self, path:str="search_db"):
+	def __init__(self, path:str=None):
+		if path is None:
+			self.path = Path(__file__).resolve().parents[2] / "search_db"
+		else:
+			self.path = Path(path).resolve()
+
 		#Basic path define...
 		self.path = Path(path)
 		self.payload_path = self.path/"payload"
@@ -96,6 +101,7 @@ class searchDB:
 		return []
 		
 	def _save_json(self, file_path:Path, data:List[Dict[str,Any]]):
+		file_path.parent.mkdir(parents=True, exist_ok=True)
 		with open(file_path, "w", encoding="utf-8") as f:
 			json.dump(data, f, indent=2, ensure_ascii=False)
 	
