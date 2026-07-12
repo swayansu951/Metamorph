@@ -54,14 +54,14 @@ system_prompt = SystemMessage("""
 message = [system_prompt]
 
 # Single unit controling model..
-llm_model = ChatOllama(model='gemma4-e4b_q5_k_m', 
+llm_model = ChatOllama(model='gemma-4-E4B-it-Q5_K_M', 
                         stream=True, 
                         num_gpu=-1,
                         keep_alive=15,
                         temperature=0.1,
                         )
 
-direct_llm_model = ChatOllama(model='gemma4-e4b_q4_k_m', 
+direct_llm_model = ChatOllama(model='gemma-4-E4B-it-Q5_K_M', 
                         stream=True, 
                         num_gpu=-1,
                         keep_alive=3,
