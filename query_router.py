@@ -57,14 +57,14 @@ message = [system_prompt]
 small_LLM = ChatOllama(model='llama3.2:3b', 
                         stream=True, 
                         num_gpu=-1,
-                        keep_alive=15,
-                        temperature=0.1,
+                        keep_alive=1,
+                        temperature=0,
                         )
 
 large_LLM = ChatOllama(model='gemma-4-E4B-it-Q5_K_M:latest', 
                         stream=True, 
                         num_gpu=-1,
-                        keep_alive=3,
+                        keep_alive=1,
                         temperature=0.2,
                         )
 

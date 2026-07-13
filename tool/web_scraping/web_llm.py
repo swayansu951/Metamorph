@@ -103,7 +103,7 @@ class WEB_LLM:
             stream=True,
             num_gpu=-1,
             temperature=0.1,
-            keep_alive=6,
+            keep_alive=1,
         )
         response_parts = []
         for chunk in llm.stream(prompt):

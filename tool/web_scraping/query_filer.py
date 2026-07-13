@@ -70,8 +70,8 @@ class filter:
             model=model,
             stream=False,
             num_gpu = -1,
-            temperature = 0.1,
-            keep_alive=6,
+            temperature = 0,
+            keep_alive=1,
         )
         response = data.invoke(self.PROMPT + "\n\n" + state['query'])
         try:
