@@ -4,7 +4,7 @@ from typing import Dict, List, Any
 from .uuid_registry import REGISTRY, uuidInfo
 from langchain_ollama.chat_models import ChatOllama
 
-model = "gemma4:e4b_q4_k_xl"
+model = "llama3.2:3b"
 agent_name = "web_llm_generator"
 id = REGISTRY.get_or_create_agent(agent_name)
 REGISTRY.task_counts(agent_name)

@@ -61,7 +61,7 @@ small_LLM = ChatOllama(model='llama3.2:3b',
                         temperature=0.1,
                         )
 
-large_LLM = ChatOllama(model='gemma4:e4b_q4_k_xl', 
+large_LLM = ChatOllama(model='gemma-4-E4B-it-Q5_K_M:latest', 
                         stream=True, 
                         num_gpu=-1,
                         keep_alive=3,

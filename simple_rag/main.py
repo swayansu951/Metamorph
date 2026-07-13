@@ -60,7 +60,7 @@ class GENERATE:
             {"role": "user", "content": question_prompt},
         ]
 
-        response = ollama.chat(model='gemma4:e4b_q4_k_xl', 
+        response = ollama.chat(model='llama3.2:3b', 
                                messages=self.messages, 
                                stream=True, 
                                options={'num_gpu':-1,
