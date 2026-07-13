@@ -26,6 +26,10 @@ TRUSTED_SITES = [
     "idss.mit.edu",
     "pubmed.ncbi.nlm.nih.gov",
     "ijmr.org.in",
+    "sofascore.com",
+    "fbref.com",
+    "formula1.com",
+    "basketball-reference.com",
 ]
 model = "llama3.2:3b"
 
