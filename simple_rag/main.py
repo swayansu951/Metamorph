@@ -21,6 +21,14 @@ else:
 class GENERATE:
     prompt = """
             Answer the question using the context below. If the answer is not found in the context, say "I don't know".
+             Answer should be retrieved in a sequesntial manner with proper sitation.
+             example:
+                ({"query": "what is RAG"},
+                {"response: "RAG is retrieval augmented generation which helps in mitigating LLM halucination [1]. It stores all the embedding in a vector database which can be retrieved via semantic search or keyword based search also use of hybrid search.
+                 As you can see from the context mentioned in the document 'RAG is the main key to remove halucination from LLMs' [2] from this we can know the main role of RAG in this AI. 
+                 [1] : page number ..
+                 [2] : page number ..}
+            Try to answer according to the 'response' from the example.
             """
     def __init__(self):
         self.messages = [{'role': 'system', 'content': self.prompt}]
@@ -52,7 +60,7 @@ class GENERATE:
             {"role": "user", "content": question_prompt},
         ]
 
-        response = ollama.chat(model='gemma-4-E4B-it-Q5_K_M', 
+        response = ollama.chat(model='gemma4:e4b_q4_k_xl', 
                                messages=self.messages, 
                                stream=True, 
                                options={'num_gpu':-1,
