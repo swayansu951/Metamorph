@@ -118,6 +118,12 @@ URLS = {
         "https://indiacode.nic.in",
         "https://govinfo.gov",
     ],
+    "sports" : [
+        "https://sofascore.com",
+        "https://fbref.com",
+        "https://formula1.com",
+        "https://basketball-reference.com",
+    ]
 }
 
 def SEARCH(query : str) -> str:
@@ -216,6 +222,12 @@ def select_web_category(query: str) -> str:
             "news", "latest", "current", "today", "recent", "breaking",
             "update", "updates", "anthropic", "openai", "google", "microsoft",
         ],
+        "sports": [
+            "sports", "sport", "score", "scores", "live score", "match",
+            "fixture", "fixtures", "standings", "league", "ipl", "nba",
+            "nfl", "mlb", "nhl", "epl", "football", "soccer", "cricket",
+            "tennis", "formula 1", "f1", "grand prix", "race",
+        ],
         "health": [
             "health", "disease", "medical", "medicine", "virus", "covid",
             "cdc", "who", "symptoms", "vaccine",
@@ -234,7 +246,7 @@ def select_web_category(query: str) -> str:
         category: sum(keyword in normalized_query for keyword in keywords)
         for category, keywords in category_keywords.items()
     }
-    for category in ("health", "finance", "legal", "science","news","programming"):
+    for category in ("sports", "health", "finance", "legal", "science", "news", "programming"):
         if scores[category] > 0:
             return category
 
@@ -412,6 +424,26 @@ def route_query(state: AgentState) -> str:
         r"\bresearch papers?\b",
         r"\bnew papers?\b",
         r"\bpublished\b",
+        r"\bsports?\b",
+        r"\bscores?\b",
+        r"\blive scores?\b",
+        r"\bmatches?\b",
+        r"\bfixtures?\b",
+        r"\bstandings?\b",
+        r"\bleague\b",
+        r"\bipl\b",
+        r"\bnba\b",
+        r"\bnfl\b",
+        r"\bmlb\b",
+        r"\bnhl\b",
+        r"\bepl\b",
+        r"\bfootball\b",
+        r"\bsoccer\b",
+        r"\bcricket\b",
+        r"\btennis\b",
+        r"\bf1\b",
+        r"\bformula 1\b",
+        r"\bgrand prix\b",
     ]
 
     if any(re.search(pattern, query) for pattern in web_triggers):

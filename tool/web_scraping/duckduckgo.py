@@ -5,6 +5,18 @@ from langchain_ollama.chat_models import ChatOllama
 from .uuid_registry import REGISTRY
 from typing import List, Dict, Any
 
+SPORTS_SITES = [
+    "sofascore.com",
+    "fbref.com",
+    "formula1.com",
+    "basketball-reference.com",
+    "espn.com",
+    "cbssports.com",
+    "skysports.com",
+    "cricbuzz.com",
+    "espncricinfo.com",
+]
+
 TRUSTED_SITES = [
     "en.wikipedia.org",
     "pubmed.ncbi.nlm.nih.gov",
@@ -26,10 +38,7 @@ TRUSTED_SITES = [
     "idss.mit.edu",
     "pubmed.ncbi.nlm.nih.gov",
     "ijmr.org.in",
-    "sofascore.com",
-    "fbref.com",
-    "formula1.com",
-    "basketball-reference.com",
+    *SPORTS_SITES,
 ]
 model = "llama3.2:3b"
 
@@ -69,6 +78,15 @@ def safe_search(query:str) -> List[Dict[str, Any]]:
                 "openreview.net",
                 "proceedings.mlr.press",
                 "aclanthology.org",
+                "sofascore.com",
+                "fbref.com",
+                "formula1.com",
+                "basketball-reference.com",
+                "espn.com",
+                "cbssports.com",
+                "skysports.com",
+                "cricbuzz.com",
+                "espncricinfo.com"
               }
             check for these 1st:
             if the query is more likely technology, coding based or similar then only use :
@@ -102,6 +120,17 @@ def safe_search(query:str) -> List[Dict[str, Any]]:
                             "openreview.net",
                             "proceedings.mlr.press",
                             "aclanthology.org",
+                            )
+            for sports related web search:
+                            ("sofascore.com",
+                             "fbref.com",
+                             "formula1.com",
+                             "basketball-reference.com",
+                             "espn.com",
+                             "cbssports.com",
+                             "skysports.com",
+                             "cricbuzz.com",
+                             "espncricinfo.com",
                             )
             for this it is stricktly used, if more needed then only use cause its has age restriction, if the query is more likely adult or 18+ problems like pelvic problems or similar then only use :
               (

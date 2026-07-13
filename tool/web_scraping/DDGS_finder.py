@@ -220,10 +220,9 @@ class DDGSSearch:
                                 "rank" : rank,
                                 "source" : "ddgs",
                                 "searched_query" : searched_query,
-                                "site" : site
+                                "searched_query" : search_query,
                             }
-                        )
-                
+                            )
                 if "news" in modes:
                     news_query = f"{query} ({site_filter})"
                     try:
