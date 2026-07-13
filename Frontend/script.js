@@ -1,4 +1,4 @@
-const API_BASE_URL = window.location.origin;
+const API_BASE_URL = "https://armed-component-cartridge.ngrok-free.dev";
 
 const REQUEST_HEADERS = {};
 
