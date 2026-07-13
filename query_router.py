@@ -1,5 +1,7 @@
 import asyncio
+import os
 import re
+import requests
 from simple_rag.main import GENERATE
 from typing import TypedDict, Optional
 from langchain_ollama import ChatOllama
@@ -54,19 +56,36 @@ system_prompt = SystemMessage("""
 message = [system_prompt]
 
 # Single unit controling model..
-small_LLM = ChatOllama(model='llama3.2:3b', 
+SMALL_MODEL_NAME = "llama3.2:3b"
+LARGE_MODEL_NAME = "gemma-4-E4B-it-Q5_K_M:latest"
+OLLAMA_BASE_URL = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+
+small_LLM = ChatOllama(model=SMALL_MODEL_NAME, 
                         stream=True, 
                         num_gpu=-1,
-                        keep_alive=1,
+                        keep_alive=0,
                         temperature=0,
                         )
 
-large_LLM = ChatOllama(model='gemma-4-E4B-it-Q5_K_M:latest', 
+large_LLM = ChatOllama(model=LARGE_MODEL_NAME, 
                         stream=True, 
                         num_gpu=-1,
-                        keep_alive="5m",
+                        keep_alive=0,
                         temperature=0.2,
                         )
+
+def unload_ollama_models() -> None:
+    """Best-effort unload of request-time Ollama models from VRAM."""
+
+    for model_name in (SMALL_MODEL_NAME, LARGE_MODEL_NAME):
+        try:
+            requests.post(
+                f"{OLLAMA_BASE_URL}/api/generate",
+                json={"model": model_name, "keep_alive": 0, "stream": False},
+                timeout=10,
+            )
+        except requests.RequestException as error:
+            print(f"Could not unload Ollama model {model_name}: {error}")
 
 # urls for web crwaling
 URLS = {
@@ -448,8 +467,6 @@ def route_query(state: AgentState) -> str:
     if "WEB_SEARCH" in decision:
         return "WEB_SEARCH"
     
-    route= route_query(state)
-    print(f"Selected route : {route}")
     return "LLM_RESPONSE"
 
 def decide_initial_routing(state: AgentState) -> str:
@@ -554,47 +571,50 @@ def _initial_state(query: str, doc_id: str | None = None, session_summary: str |
 
 async def async_final_answer_stream(query:str, doc_id:str |None = None, session_summary:str| None=None, role:str ="drafter_agent", task:str="finalize the answer perfectly"):
     """Stream the resulted text in a sequencial manner rather than sending at ones, send it chunk by chunk"""
-    state = _initial_state(query,doc_id, session_summary)
-    route = route_query(state)
-    
-    if route == "RAG_SEARCH":
-        state.update(prepare_rag_windows(state))
+    try:
+        state = _initial_state(query,doc_id, session_summary)
+        route = route_query(state)
+        
+        if route == "RAG_SEARCH":
+            state.update(prepare_rag_windows(state))
 
-    elif route == "WEB_SEARCH":
-        web_result = await asyncio.to_thread(new_web_crawler, state)
-        state.update(web_result)
+        elif route == "WEB_SEARCH":
+            web_result = await asyncio.to_thread(new_web_crawler, state)
+            state.update(web_result)
 
-    else:
-        result = await app.ainvoke(state)
-        answer = result.get("final_answer", "")
-        if answer:
-            yield answer
-        return
+        else:
+            result = await app.ainvoke(state)
+            answer = result.get("final_answer", "")
+            if answer:
+                yield answer
+            return
 
-    state.update(
-                    await asyncio.to_thread(reason_over_window, state)
-                )
-
-    while decide_next_step(state) == "NEXT_WINDOW":
-        state.update(load_next_window(state))
         state.update(
-            await asyncio.to_thread(reason_over_window, state)
+                        await asyncio.to_thread(reason_over_window, state)
+                    )
+
+        while decide_next_step(state) == "NEXT_WINDOW":
+            state.update(load_next_window(state))
+            state.update(
+                await asyncio.to_thread(reason_over_window, state)
+            )
+
+        prompt = (
+            "You are answer drafter correctly draft the answer and properly mention and annotate the answers in a proper format."
+            "Answer using only the supplied context.\n"
+            "Include source URLs when available.\n\n"
+            f"Question: {state['query']}\n\n"
+            f"Context:\n{state['current_window']}"
         )
 
-    prompt = (
-        "You are answer drafter correctly draft the answer and properly mention and annotate the answers in a proper format."
-        "Answer using only the supplied context.\n"
-        "Include source URLs when available.\n\n"
-        f"Question: {state['query']}\n\n"
-        f"Context:\n{state['current_window']}"
-    )
-
-    async for chunk in large_LLM.astream(
-        [HumanMessage(content=prompt)]
-    ):
-        content = getattr(chunk, "content", "") or ""
-        if content:
-            yield content
+        async for chunk in large_LLM.astream(
+            [HumanMessage(content=prompt)]
+        ):
+            content = getattr(chunk, "content", "") or ""
+            if content:
+                yield content
+    finally:
+        await asyncio.to_thread(unload_ollama_models)
 
 async def async_final_answer(
     query: str,
@@ -602,8 +622,11 @@ async def async_final_answer(
     session_summary: str | None = None
 ) -> str:
     """Async graph entrypoint for FastAPI or other async callers."""
-    result = await app.ainvoke(_initial_state(query, doc_id, session_summary))
-    return result.get("final_answer", "")
+    try:
+        result = await app.ainvoke(_initial_state(query, doc_id, session_summary))
+        return result.get("final_answer", "")
+    finally:
+        await asyncio.to_thread(unload_ollama_models)
 
 def final_answer(query:str, doc_id:str |None=None, session_summary: str | None = None):
     """Finally gives the final response from the big llm generated"""
