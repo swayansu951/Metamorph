@@ -6,7 +6,7 @@ import random
 import time
 from ddgs import DDGS
 from typing import Callable, Dict, List, Any
-from web_scraping.duckduckgo import safe_search, TRUSTED_SITES
+from tool.web_scraping.duckduckgo import safe_search, TRUSTED_SITES
 from urllib.parse import urlparse
 
 class DDGSSearch:
