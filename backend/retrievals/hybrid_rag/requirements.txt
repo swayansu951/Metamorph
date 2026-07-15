@@ -1,0 +1,10 @@
+Flask
+Werkzeug
+ollama
+PyMuPDF
+numpy
+faiss-cpu
+sentence-transformers
+scikit-learn
+torch
+rank-bm25
