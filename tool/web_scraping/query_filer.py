@@ -1,12 +1,13 @@
-import json
+﻿import json
 import re
 from typing import TypedDict
 from contextlib import contextmanager # to be used in future update
 from .uuid_registry import REGISTRY
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, SystemMessage
+from ModelnPrompt import MODELS, SYSTEM_PRMOPTS
 from langchain_ollama.chat_models import ChatOllama
 
-model = "llama3.2:3b"
+model = MODELS.query_router
 
 class QueryState(TypedDict):
     """data type should be based on this to prevent any error\n
@@ -19,23 +20,7 @@ class QueryState(TypedDict):
     agent_id : str
 
 class filter:
-
-    PROMPT = ("""
-        You are a query classification agent.
-        Return ONLY valid JSON. Do not include markdown, code fences, variable names,
-        comments, explanations, or text before/after the JSON.
-
-        Required JSON shape:
-        {
-            "query": "the original user query",
-            "query_type": "text_only | image_needed | video_needed | mixed | link_only",
-            "domain": "programming | science | legal | medical | news | finance | research | general",
-            "freshness": "latest | recent | historical",
-            "source_quality": "official | academic | trusted_news | docs | general",
-            "media_need": "none | optional | required",
-            "search_depth": "quick | medium | deep"
-        }
-        """)
+    PROMPT = SYSTEM_PRMOPTS.query_filter
 
     def _parse_json_response(self, content: str) -> dict:
         """Parse strict JSON, with fallback for common LLM wrappers."""
@@ -73,7 +58,10 @@ class filter:
             temperature = 0,
             keep_alive=1,
         )
-        response = data.invoke(self.PROMPT + "\n\n" + state['query'])
+        response = data.invoke([
+            SystemMessage(content=SYSTEM_PRMOPTS.query_filter),
+            HumanMessage(content=state["query"]),
+        ])
         try:
             output = self._parse_json_response(response.content)
         except json.JSONDecodeError as e:

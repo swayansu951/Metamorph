@@ -1,9 +1,10 @@
-from ddgs import DDGS
+﻿from ddgs import DDGS
 from urllib.parse import urlparse
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_ollama.chat_models import ChatOllama
 from .uuid_registry import REGISTRY
 from typing import List, Dict, Any
+from ModelnPrompt import MODELS, SYSTEM_PRMOPTS
 
 SPORTS_SITES = [
     "sofascore.com",
@@ -40,7 +41,7 @@ TRUSTED_SITES = [
     "ijmr.org.in",
     *SPORTS_SITES,
 ]
-model = "llama3.2:3b"
+model = MODELS.query_router
 
 def safe_search(query:str) -> List[Dict[str, Any]]:
     """Defines which domains to use only, with safe query and data extraction safety.\n
@@ -49,102 +50,10 @@ def safe_search(query:str) -> List[Dict[str, Any]]:
     choosed_domains = " OR ".join(f"site:{domains}" for domains in TRUSTED_SITES)
     sites =[]
 
-    PROMPT = [SystemMessage(content=""" 
-            You are an expert search filter assistant, filter that which search url to use according to the query provided.\n
-            Refine the query to get better search result.\n
-            The trusted sites are:\n
-              {
-                "en.wikipedia.org",
-                "pubmed.ncbi.nlm.nih.gov",
-                "medlineplus.gov",
-                "webmd.com",
-                "healthline.com",
-                "investing.com",
-                "marketwatch.com ",
-                "investopedia.com",
-                "mayoclinic.org",
-                "wikipedia.org",
-                "github.com",
-                "stackoverflow.com",
-                "reuters.com",
-                "nasa.gov",
-                "youtube.com",
-                "reddit.com",
-                "geeksforgeeks.org",
-                "idss.mit.edu",
-                "pubmed.ncbi.nlm.nih.gov",
-                "ijmr.org.in",
-                "arxiv.org",
-                "openreview.net",
-                "proceedings.mlr.press",
-                "aclanthology.org",
-                "sofascore.com",
-                "fbref.com",
-                "formula1.com",
-                "basketball-reference.com",
-                "espn.com",
-                "cbssports.com",
-                "skysports.com",
-                "cricbuzz.com",
-                "espncricinfo.com"
-              }
-            check for these 1st:
-            if the query is more likely technology, coding based or similar then only use :
-              (
-                "github.com",
-                "stackoverflow.com",
-                "geeksforgeeks.org",
-
-              )
-            if the query is more likely psycological then only use :
-              (
-                "en.wikipedia.org",
-                "pubmed.ncbi.nlm.nih.gov",
-              
-              )
-            if the query is more likely health and medical related then only use :
-              (
-                "medlineplus.gov",
-                "webmd.com",
-                "healthline.com",
-              )
-            if the query is more likely finance, stock and investement then only use :
-              (
-                "investing.com",
-                "marketwatch.com ",
-                "investopedia.com",
-              )
-            for academic and research paper or related, it's an all rounder site to fetch:
-                            (
-                            "arxiv.org",
-                            "openreview.net",
-                            "proceedings.mlr.press",
-                            "aclanthology.org",
-                            )
-            for sports related web search:
-                            ("sofascore.com",
-                             "fbref.com",
-                             "formula1.com",
-                             "basketball-reference.com",
-                             "espn.com",
-                             "cbssports.com",
-                             "skysports.com",
-                             "cricbuzz.com",
-                             "espncricinfo.com",
-                            )
-            for this it is stricktly used, if more needed then only use cause its has age restriction, if the query is more likely adult or 18+ problems like pelvic problems or similar then only use :
-              (
-                "mayoclinic.org",
-              )
-                            
-            Return the output in this order:
-              ["query site:'choosed site over here'"], 
-            
-            Example : 
-            ["latest tech news site:wikipedia.org", "latest tech news site:reddit.com"]
-            
-            """),
-            HumanMessage(content=query)]
+    PROMPT = [
+        SystemMessage(content=SYSTEM_PRMOPTS.site_filter),
+        HumanMessage(content=f"Trusted domains: {TRUSTED_SITES}\nUser query: {query}"),
+    ]
     
     agent_name = "site_agent"
     id = REGISTRY.get_or_create_agent(agent_name)

@@ -1,18 +1,13 @@
-import ollama
+﻿import ollama
 import re
 from HYBRID_SEARCH.HybridSearch import hybrid_search
 from HybridRetriever.reranker import rerank
 from HYBRID_SEARCH.context_builder import build_context
 from database.ingest_pdf import ingest_pdf
+from ModelnPrompt import MODELS, SYSTEM_PRMOPTS
 
 class GENERATE:
-    prompt = f"""
-            Answer the question using the context below. If the answer is not found in the context, say "I don't know".
-            Context:
-            {"context"}
-            Question:
-            {"user_input"}
-            """
+    prompt = SYSTEM_PRMOPTS.rag_answer
     def __init__(self):
         self.messages = [{'role': 'system', 'content': self.prompt}]
 
@@ -41,7 +36,7 @@ class GENERATE:
         """
         self.messages.append({"role":"user","content":prompt})
 
-        response = ollama.chat(model='llama3.1:8b-instruct-q5_K_S', messages=self.messages, stream=True, options={"num_thread":10,"keep_alive":"10s"})
+        response = ollama.chat(model=MODELS.rag_model, messages=self.messages, stream=True, options={"num_thread":10,"keep_alive":10})
         full_response = ""
         sentence_buffer = ""
 
@@ -61,3 +56,4 @@ class GENERATE:
                 final_text = re.sub(r'\[.*?\]', '', sentence_buffer).strip()
                 if final_text:
                     yield final_text
+

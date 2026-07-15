@@ -1,9 +1,10 @@
-from simple_rag.main import GENERATE
+﻿from simple_rag.main import GENERATE
 from langchain_core.tools import tool
 from langchain_core.messages import SystemMessage
+from ModelnPrompt import SYSTEM_PRMOPTS
 
 generator = GENERATE()
-system_prompt = SystemMessage("Answer the question using the context below. If the answer is not found in the context or not relevant or no document uploaded, use web crawling to get answer'")
+system_prompt = SystemMessage(SYSTEM_PRMOPTS.rag_answer)
 
 @tool
 def RAG_router(query: str, doc_id: str) -> str:

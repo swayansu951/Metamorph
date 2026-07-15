@@ -1,4 +1,4 @@
-# Advanced web crawling technique...
+﻿# Advanced web crawling technique...
 # Dedicates on high performance with high quality and accurate retrieval.
 # No case of halucination and misliding of information.
 """crawl4ai, web crawler tool"""
@@ -17,6 +17,7 @@ from crawl4ai.deep_crawling.scorers import KeywordRelevanceScorer
 from crawl4ai.markdown_generation_strategy import DefaultMarkdownGenerator
 from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, BrowserConfig, CacheMode, LLMExtractionStrategy, LLMConfig
 from crawl4ai.deep_crawling.filters import URLPatternFilter, DomainFilter, ContentRelevanceFilter
+from ModelnPrompt import MODELS, SYSTEM_PRMOPTS
 
 
 USE_LOCAL_SYSTEM = True
@@ -98,16 +99,7 @@ def reranker(query: str, crawled_data: list):
 def generate_response(query:str, context:list):
     """VLM response"""
     unified_context = "source".join(context)
-    SYSTEM_PROMPT = ("""
-                    you are an adversarial information extractor, extract information according to the user's query.\n
-                    Do not use external knowledge.\n
-                    You must return your response in a valid json object matching this schema :\n
-                     {\n
-                        "resoning_step" : [step1, step2], \n
-                        "structured_finding" : [{"fact" : "extracted fact", "source_url" : "url"}], \n
-                        "final_content" : "the summary answer here...." \n
-                     } 
-    """)
+    SYSTEM_PROMPT = SYSTEM_PRMOPTS.web_extractor
     USER_PROMPT = (
                     f"context :\n {unified_context}\n\n Query : \n {query}\n\n return json output: "
     )
@@ -118,7 +110,7 @@ def generate_response(query:str, context:list):
         f"<|start_header_id|>assistant<|end_header_id|>\n\n"
     )
     
-    response = ollama.chat(model="qwen2.5vl",
+    response = ollama.chat(model=MODELS.vision_model,
                            images=[iamge_path], 
                             stream=True, 
                             think="medium", 
@@ -166,3 +158,4 @@ async def run_pipeline(query: str, url:dict): # set pre defined urls to use only
 # hard code the web pages to scrap 
 # user query
 # function call using asyncio.run(...)
+
