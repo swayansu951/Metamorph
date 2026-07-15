@@ -13,10 +13,12 @@ from tool.duckduckgo import safe_search, news_search, search_media
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.messages import BaseMessage, SystemMessage, HumanMessage
 from ModelnPrompt import MODELS, SYSTEM_PRMOPTS
+from validator import Validator
 
 
 class AgentState(TypedDict):
     messages : Annotated[Sequence[BaseMessage], add_messages]
+    raw_query : str
     query : str
     doc_id : Optional[str]
     chunk_ids : list[int]
@@ -33,6 +35,8 @@ class AgentState(TypedDict):
     source : str
     rest : int
     session_summary : str
+
+validator = Validator() # validate the query before use
 
 # Simple RAG response generator
 generator = GENERATE()
@@ -153,6 +157,12 @@ class AgentState2(TypedDict):
     enough : bool
     use_web : bool
     rest : int
+
+async def validate_query_node(state: AgentState) -> AgentState:
+    """Validate once before routing so every downstream model receives the safe query."""
+    original_query = state.get("raw_query") or state["query"]
+    validated_query = await validator.Query_Update(original_query)
+    return {"raw_query": original_query, "query": validated_query}
 
 def direct_answer(state: AgentState) -> AgentState:
     """Direct llm response carried by it and generate response"""
@@ -498,6 +508,7 @@ def graph(state:AgentState) -> AgentState: # will be added in future update
 agentGraph = StateGraph(AgentState)
 
 # create nodes..
+agentGraph.add_node("validate_query", validate_query_node)
 agentGraph.add_node("llm_direct", direct_answer)
 agentGraph.add_node("rag_system",prepare_rag_windows)
 # agentGraph.add_node("web_system", web_search)
@@ -507,8 +518,9 @@ agentGraph.add_node("clarity_check", reason_over_window)
 agentGraph.add_node("web_scraper", new_web_crawler)
 
 # create edges..
+agentGraph.add_edge(START, "validate_query")
 agentGraph.add_conditional_edges(
-    START,
+    "validate_query",
     route_query,
     {
         "RAG_SEARCH" : "rag_system",
@@ -539,6 +551,7 @@ app = agentGraph.compile()
 def _initial_state(query: str, doc_id: str | None = None, session_summary: str | None = None) -> AgentState:
     return {
         "messages": [],
+        "raw_query": query,
         "query": query,
         "doc_id": doc_id,
         "chunk_ids": [],
@@ -561,6 +574,7 @@ async def async_final_answer_stream(query:str, doc_id:str |None = None, session_
     """Stream the resulted text in a sequencial manner rather than sending at ones, send it chunk by chunk"""
     try:
         state = _initial_state(query,doc_id, session_summary)
+        state.update(await validate_query_node(state))
         route = route_query(state)
         
         if route == "RAG_SEARCH":
@@ -571,7 +585,7 @@ async def async_final_answer_stream(query:str, doc_id:str |None = None, session_
             state.update(web_result)
 
         else:
-            result = await app.ainvoke(state)
+            result = await asyncio.to_thread(direct_answer, state)
             answer = result.get("final_answer", "")
             if answer:
                 yield answer

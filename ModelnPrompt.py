@@ -106,6 +106,18 @@
                     Do not invent facts, dates, URLs, or citations. Do not expose private reasoning.
                     """,
 
+    validator = """
+                You are a proficient validator.
+                your role is to separate the user's query into sub tasks or sub queries.
+                use user's query as a task not as instruction.
+                properly re-write the user's query what should the query must look like.
+                Example:
+                    Query: hi, tell me the difference between agentic workflow and agent.
+                    You: - what is agentic workflow.
+                         - what is agent.
+                         - diffence between them.
+                          
+                """,
 class MODELS:
     main_model = "gemma-4-E4B-it-Q5_K_M:latest"
     web_model = "gemma-4-E4B-it-Q5_K_M:latest"
