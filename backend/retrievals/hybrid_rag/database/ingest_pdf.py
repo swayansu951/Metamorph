@@ -6,10 +6,10 @@ import faiss
 import numpy as np
 from rank_bm25 import BM25Plus
 
-from database.embedding_model import model
-from database.pdf_loader import load_pdf
-from database.semantic_chunker import semantic_chunker
-from database.summarizer import summarize_document, summarize_chunks
+from backend.retrievals.hybrid_rag.database.embedding_model import model
+from backend.retrievals.hybrid_rag.database.pdf_loader import load_pdf
+from backend.retrievals.hybrid_rag.database.semantic_chunker import semantic_chunker
+from backend.retrievals.hybrid_rag.database.summarizer import summarize_document, summarize_chunks
 
 dim = model.get_sentence_embedding_dimension()
 
